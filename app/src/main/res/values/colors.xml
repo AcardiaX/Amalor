@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher icon colors - Light mode -->
+    <color name="launcher_icon_primary_fill">@android:color/system_primary_container_light</color>
+    <color name="launcher_icon_primary_stroke">@android:color/system_on_secondary_container_light</color>
+    <color name="launcher_icon_secondary_fill">@android:color/system_secondary_container_light</color>
+    <color name="launcher_icon_secondary_stroke">@android:color/system_accent3_700</color>
+    <color name="ic_launcher_background">@android:color/system_secondary_container_light</color>
+    <color name="splash_surface">@android:color/system_neutral1_10</color>
+</resources>
