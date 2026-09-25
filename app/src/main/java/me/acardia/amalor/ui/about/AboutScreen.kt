@@ -126,7 +126,7 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit, modifier: Modifi
                             iconVector = Icons.Rounded.Code,
                             shape = shape,
                             trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
-                            onClick = { uriHandler.openUri("https://github.com/Acardia/Material-You-for-ColorOS") },
+                            onClick = { uriHandler.openUri("https://github.com/AcardiaX/Amalor") },
                         )
                     }
                     item { shape ->
@@ -146,7 +146,7 @@ fun AboutScreen(onBack: () -> Unit, onOpenLicenses: () -> Unit, modifier: Modifi
                             iconVector = Icons.Rounded.Link,
                             shape = shape,
                             trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
-                            onClick = { uriHandler.openUri("https://t.me/MaterialYouForColorOS") },
+                            onClick = { uriHandler.openUri("https://t.me/+hnEPIdNSwotlNGJl") },
                         )
                     }
                 }
