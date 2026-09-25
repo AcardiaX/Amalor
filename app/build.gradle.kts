@@ -1,5 +1,8 @@
 import java.util.Properties
 
+val appVersionCode = 1
+val appVersionName = "1.0.0"
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -14,8 +17,8 @@ android {
         applicationId = "me.acardia.amalor"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     buildFeatures {
@@ -55,6 +58,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_25
         targetCompatibility = JavaVersion.VERSION_25
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set(
+                "Amalor_v${appVersionName}_${appVersionCode}-${variant.name}.apk",
+            )
+        }
     }
 }
 
