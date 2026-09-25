@@ -1,7 +1,16 @@
 import java.util.Properties
 
-val appVersionCode = 1
-val appVersionName = "1.0.0"
+fun gitValue(vararg args: String): String = runCatching {
+    project.providers.exec {
+        commandLine("git", *args)
+    }.standardOutput.asText.get().trim()
+}.getOrDefault("")
+
+val appVersionCode = gitValue("rev-list", "--count", "HEAD").toIntOrNull() ?: 1
+val appVersionName = (
+    project.findProperty("VERSION_NAME") as String?
+    ?: gitValue("log", "-1", "--format=%cd", "--date=format:%y.%m").ifBlank { "0.1" }
+).removePrefix("v")
 
 plugins {
     id("com.android.application")
