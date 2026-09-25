@@ -7,7 +7,7 @@
 Material 3 Expressive · Compose · Root 模块配置
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](../LICENSE)
-[![Release](https://img.shields.io/badge/version-1.0.0-green.svg)](#)
+[![Latest Release](https://img.shields.io/github/v/release/AcardiaX/Amalor?label=稳定版)](https://github.com/AcardiaX/Amalor/releases/latest)
 
 [English](README.md) | **简体中文**
 
