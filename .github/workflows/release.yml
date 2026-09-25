@@ -84,28 +84,69 @@ jobs:
             | .[0].tagName // ""')"
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
+      - name: Generate release notes
+        env:
+          CURRENT_TAG: v${{ inputs.version_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PREVIOUS_TAG: ${{ steps.release_meta.outputs.previous_tag }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            LOG_RANGE=("$PREVIOUS_TAG..HEAD")
+          else
+            LOG_RANGE=()
+          fi
+
+          write_category() {
+            local category="$1"
+            local found=0
+
+            while IFS=$'\t' read -r subject hash; do
+              [ -n "$subject" ] || continue
+              prefix="${subject%%:*}"
+              prefix="${prefix%%(*}"
+              case "$prefix" in
+                feat|feature) commit_category="features" ;;
+                perf|refactor) commit_category="improvements" ;;
+                fix|bugfix) commit_category="fixes" ;;
+                *) commit_category="changes" ;;
+              esac
+              if [ "$commit_category" = "$category" ]; then
+                echo "- ${subject} (\`${hash}\`)"
+                found=1
+              fi
+            done < <(git log --no-merges --format='%s%x09%h' "${LOG_RANGE[@]}")
+
+            [ "$found" -eq 1 ] || echo "- 无 / None"
+            echo
+          }
+
+          {
+            echo "## ✨ 新增 / Features"
+            write_category "features"
+            echo "## ⚡ 优化 / Improvements"
+            write_category "improvements"
+            echo "## 🔄 变更 / Changes"
+            write_category "changes"
+            echo "## 🐛 修复 / Fixes"
+            write_category "fixes"
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "[完整变更 / Full changelog](https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS_TAG}...${CURRENT_TAG})"
+            else
+              echo "[提交记录 / Commit history](https://github.com/${GITHUB_REPOSITORY}/commits/${CURRENT_TAG})"
+            fi
+          } > release-notes.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          name: Amalor ${{ inputs.version_name }}
+          name: ${{ inputs.version_name }}
           tag_name: v${{ inputs.version_name }}
           draft: true
           prerelease: false
-          body: |
-            ## 📦 构建信息 / Build Information
-
-            - Version: `${{ inputs.version_name }}`
-            - APK: `Amalor_v${{ inputs.version_name }}_<versionCode>-release.apk`
-            - Minimum Android version: Android 12 (API 31)
-            - Target SDK: 36
-
-            ## 📝 更新内容 / Changes
-
-            The change list below is generated automatically from commits and pull requests since the previous stable release.
-            下面的变更记录由 GitHub 根据上一个正式版本以来的提交和 Pull Request 自动生成。
-
-          previous_tag: ${{ steps.release_meta.outputs.previous_tag }}
-          generate_release_notes: true
+          body_path: release-notes.md
+          generate_release_notes: false
           fail_on_unmatched_files: true
           files: |
             app/build/outputs/apk/release/Amalor_*-release.apk

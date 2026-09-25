@@ -1,20 +1,22 @@
 changelog:
   categories:
-    - title: "🚀 Features / 新增功能"
+    - title: "✨ Features / 新增"
       labels:
         - "feature"
         - "enhancement"
+    - title: "⚡ Improvements / 优化"
+      labels:
+        - "improvement"
+        - "performance"
+        - "refactor"
+    - title: "🔄 Changes / 变更"
+      labels:
+        - "change"
+        - "breaking-change"
     - title: "🐛 Fixes / 修复"
       labels:
         - "bug"
         - "fix"
-    - title: "📚 Documentation / 文档"
-      labels:
-        - "documentation"
-        - "docs"
-    - title: "🔧 Other Changes / 其他变更"
-      labels:
-        - "*"
   exclude:
     labels:
       - "skip-changelog"
