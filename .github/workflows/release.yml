@@ -63,11 +63,49 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :app:assembleRelease -PVERSION_NAME="${{ inputs.version_name }}" --no-daemon
 
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Amalor-v${{ inputs.version_name }}-apk
+          path: app/build/outputs/apk/release/Amalor_*-release.apk
+          retention-days: 15
+          archive: false
+
+      - name: Find previous stable release
+        id: release_meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT_TAG: v${{ inputs.version_name }}
+        run: |
+          previous_tag="$(gh release list --limit 100 --json tagName,isDraft,isPrerelease,publishedAt --jq '
+            map(select(.isDraft == false and .isPrerelease == false and .tagName != env.CURRENT_TAG))
+            | sort_by(.publishedAt)
+            | reverse
+            | .[0].tagName // ""')"
+          echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           name: Amalor ${{ inputs.version_name }}
           tag_name: v${{ inputs.version_name }}
           draft: true
+          prerelease: false
+          body: |
+            ## 📦 构建信息 / Build Information
+
+            - Version: `${{ inputs.version_name }}`
+            - APK: `Amalor_v${{ inputs.version_name }}_<versionCode>-release.apk`
+            - Minimum Android version: Android 12 (API 31)
+            - Target SDK: 36
+
+            ## 📝 更新内容 / Changes
+
+            The change list below is generated automatically from commits and pull requests since the previous stable release.
+            下面的变更记录由 GitHub 根据上一个正式版本以来的提交和 Pull Request 自动生成。
+
+          previous_tag: ${{ steps.release_meta.outputs.previous_tag }}
           generate_release_notes: true
-          files: app/build/outputs/apk/release/Amalor_*-release.apk
+          fail_on_unmatched_files: true
+          files: |
+            app/build/outputs/apk/release/Amalor_*-release.apk

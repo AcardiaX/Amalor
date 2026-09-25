@@ -1,0 +1,20 @@
+changelog:
+  categories:
+    - title: "🚀 Features / 新增功能"
+      labels:
+        - "feature"
+        - "enhancement"
+    - title: "🐛 Fixes / 修复"
+      labels:
+        - "bug"
+        - "fix"
+    - title: "📚 Documentation / 文档"
+      labels:
+        - "documentation"
+        - "docs"
+    - title: "🔧 Other Changes / 其他变更"
+      labels:
+        - "*"
+  exclude:
+    labels:
+      - "skip-changelog"
