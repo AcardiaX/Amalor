@@ -79,6 +79,9 @@ fun AmalorApp(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { Page.entries.size })
     val mainPagerState = rememberMainPagerState(pagerState)
+    LaunchedEffect(pagerState.currentPage) {
+        mainPagerState.syncPage()
+    }
     val selectedPage = mainPagerState.selectedPage
     val windowInfo = LocalWindowInfo.current
     val density = LocalDensity.current
