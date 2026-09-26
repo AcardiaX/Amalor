@@ -3,7 +3,10 @@ package me.acardia.amalor
 import android.os.Build
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -17,6 +20,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationItemIconPosition
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailDefaults
+import androidx.compose.material3.WideNavigationRailItem
+import androidx.compose.material3.WideNavigationRailValue
+import androidx.compose.material3.rememberWideNavigationRailState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarArrangement
 import androidx.compose.material3.ShortNavigationBarItem
@@ -25,6 +37,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +80,18 @@ fun AmalorApp(
     val pagerState = rememberPagerState(pageCount = { Page.entries.size })
     val mainPagerState = rememberMainPagerState(pagerState)
     val selectedPage = mainPagerState.selectedPage
+    val windowInfo = LocalWindowInfo.current
+    val density = LocalDensity.current
+    val windowWidthDp = with(density) { windowInfo.containerSize.width.toDp().value }
+    val windowHeightDp = with(density) { windowInfo.containerSize.height.toDp().value }
+    val windowType = when {
+        windowWidthDp >= 840f -> 2
+        windowWidthDp >= 600f -> 1
+        else -> 0
+    }
+    val showNavigationRail = windowType == 2 || (windowType == 1 && windowWidthDp > windowHeightDp)
+    val railState = rememberWideNavigationRailState()
+    val railExpanded = railState.targetValue == WideNavigationRailValue.Expanded
     var rootState by remember { mutableStateOf<RootState?>(null) }
     val backStack = remember { navBackStackOf(AmalorRoute.Main) }
     val navigator = remember(backStack) { NavController(backStack) }
@@ -88,26 +114,57 @@ fun AmalorApp(
             ),
         ) {
             entry<AmalorRoute.Main> {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    contentWindowInsets = WindowInsets(),
-                    bottomBar = {
-                        ShortNavigationBar(
-                            windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
-                            containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            arrangement = ShortNavigationBarArrangement.EqualWeight,
-                        ) {
-                            ShortNavigationBarItem(selectedPage == Page.HOME.ordinal, { mainPagerState.animateToPage(Page.HOME.ordinal) }, iconPosition = NavigationItemIconPosition.Top, icon = { Icon(painterResource(if (selectedPage == Page.HOME.ordinal) R.drawable.ic_home_filled else R.drawable.ic_home), null) }, label = { Text(stringResource(R.string.home)) })
-                            ShortNavigationBarItem(selectedPage == Page.CONFIG.ordinal, { mainPagerState.animateToPage(Page.CONFIG.ordinal) }, iconPosition = NavigationItemIconPosition.Top, icon = { Icon(painterResource(if (selectedPage == Page.CONFIG.ordinal) R.drawable.ic_config_filled else R.drawable.ic_config), null) }, label = { Text(stringResource(R.string.config)) })
-                            ShortNavigationBarItem(selectedPage == Page.SETTINGS.ordinal, { mainPagerState.animateToPage(Page.SETTINGS.ordinal) }, iconPosition = NavigationItemIconPosition.Top, icon = { Icon(painterResource(if (selectedPage == Page.SETTINGS.ordinal) R.drawable.ic_settings_filled else R.drawable.ic_settings), null) }, label = { Text(stringResource(R.string.settings)) })
-                        }
-                    },
-                ) { mainPadding ->
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize().consumeWindowInsets(mainPadding),
-                    overscrollEffect = null,
-                ) { targetPage ->
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val wideLayout = showNavigationRail
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        contentWindowInsets = WindowInsets(),
+                        bottomBar = {
+                            if (!wideLayout) {
+                                ShortNavigationBar(
+                                    windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    arrangement = ShortNavigationBarArrangement.EqualWeight,
+                                ) {
+                                    MainNavigationItems(selectedPage, mainPagerState, compact = true)
+                                }
+                            }
+                        },
+                    ) { mainPadding ->
+                        Row(Modifier.fillMaxSize()) {
+                            if (wideLayout) {
+                                WideNavigationRail(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    state = railState,
+                                    colors = WideNavigationRailDefaults.colors().copy(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = MaterialTheme.colorScheme.onSurface,
+                                    ),
+                                    windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Vertical),
+                                    header = {
+                                        IconButton(
+                                            modifier = Modifier.padding(start = 24.dp),
+                                            onClick = {
+                                                scope.launch {
+                                                    if (railExpanded) railState.collapse() else railState.expand()
+                                                }
+                                            },
+                                        ) {
+                                            Icon(
+                                                if (railExpanded) Icons.AutoMirrored.Filled.MenuOpen else Icons.Filled.Menu,
+                                                null,
+                                            )
+                                        }
+                                    },
+                                ) {
+                                    MainNavigationItems(selectedPage, mainPagerState, compact = false, railExpanded = railExpanded)
+                                }
+                            }
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.weight(1f).fillMaxSize().consumeWindowInsets(mainPadding),
+                                overscrollEffect = null,
+                            ) { targetPage ->
                     when (Page.entries[targetPage]) {
                         Page.HOME -> HomeScreen(outerPadding = mainPadding, isLoading = rootState == null, isRootAuthorized = rootState?.authorized == true, isModuleInstalled = rootState?.moduleInstalled == true, moduleVersion = rootState?.moduleVersion, activePrivilegeSource = rootState?.source, deviceName = rootState?.deviceName ?: "")
                         Page.CONFIG -> ConfigScreen(
@@ -136,7 +193,9 @@ fun AmalorApp(
                         )
                         Page.SETTINGS -> SettingsScreen(outerPadding = mainPadding, settings = themeSettings, onSettingsChange = onThemeSettingsChange, onOpenAbout = { navigator.push(AmalorRoute.About) })
                     }
-                }
+                            }
+                        }
+                    }
                 }
             }
             entry<AmalorRoute.About>(swipeDismiss = NavSwipeDirection.LeftToRight) { AboutScreen(onBack = { navigator.pop() }, onOpenLicenses = { navigator.push(AmalorRoute.Licenses) }) }
@@ -148,6 +207,40 @@ private fun applyModuleConfig(signal: Int, style: Int, padding: Int): Boolean = 
     val command = "sh /data/adb/modules/material_you_for_coloros/apply-config.sh $signal $style $padding"
     Runtime.getRuntime().exec(arrayOf("su", "-c", command)).waitFor() == 0
 }.getOrDefault(false)
+
+@Composable
+private fun MainNavigationItems(
+    selectedPage: Int,
+    pagerState: me.acardia.amalor.ui.navigation.MainPagerState,
+    compact: Boolean,
+    railExpanded: Boolean = true,
+) {
+    val items = listOf(
+        Triple(R.string.home, R.drawable.ic_home_filled, R.drawable.ic_home),
+        Triple(R.string.config, R.drawable.ic_config_filled, R.drawable.ic_config),
+        Triple(R.string.settings, R.drawable.ic_settings_filled, R.drawable.ic_settings),
+    )
+    items.forEachIndexed { index, (label, selectedIcon, unselectedIcon) ->
+        val selected = selectedPage == index
+        if (compact) {
+            ShortNavigationBarItem(
+                selected = selected,
+                onClick = { pagerState.animateToPage(index) },
+                iconPosition = NavigationItemIconPosition.Top,
+                icon = { Icon(painterResource(if (selected) selectedIcon else unselectedIcon), null) },
+                label = { Text(stringResource(label)) },
+            )
+        } else {
+            WideNavigationRailItem(
+                railExpanded = railExpanded,
+                selected = selected,
+                onClick = { pagerState.animateToPage(index) },
+                icon = { Icon(painterResource(if (selected) selectedIcon else unselectedIcon), null) },
+                label = { Text(stringResource(label)) },
+            )
+        }
+    }
+}
 
 data class ModuleConfig(val signal: Int, val style: Int, val padding: Int) {
     companion object { val default = ModuleConfig(0, 0, 0) }
