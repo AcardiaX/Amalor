@@ -11,8 +11,6 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -35,6 +33,7 @@ import me.acardia.amalor.ui.theme.PaletteStyle
 import me.acardia.amalor.ui.theme.ThemeColorSpec
 import me.acardia.amalor.ui.theme.dynamicColorScheme
 import kotlinx.coroutines.launch
+import io.github.libxposed.service.XposedService
 
 enum class AppThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -44,21 +43,39 @@ data class AppThemeSettings(
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
 )
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), XposedServiceStateListener {
+    private var xposedService by mutableStateOf<XposedService?>(null)
+    private var themeReady = false
+
+    override fun onStart() {
+        super.onStart()
+        AmalorApplication.addServiceStateListener(this, notifyImmediately = true)
+    }
+
+    override fun onStop() {
+        AmalorApplication.removeServiceStateListener(this)
+        super.onStop()
+    }
+
+    override fun onServiceStateChanged(service: XposedService?) {
+        xposedService = service
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         val splashStartedAt = SystemClock.uptimeMillis()
         super.onCreate(savedInstanceState)
         splashScreen.setKeepOnScreenCondition {
-            SystemClock.uptimeMillis() - splashStartedAt < 500L
+            !themeReady || SystemClock.uptimeMillis() - splashStartedAt < 500L
         }
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
-            val themeSettings by context.amalorThemeSettings.collectAsState(initial = AppThemeSettings())
+            val loadedSettings by context.amalorThemeSettings.collectAsState(initial = null)
+            val themeSettings = loadedSettings ?: return@setContent
             val scope = rememberCoroutineScope()
-            AmalorTheme(themeSettings) {
-                AmalorApp(themeSettings) { newSettings ->
+            AmalorTheme(themeSettings, onReady = { themeReady = true }) {
+                 AmalorApp(themeSettings, xposedService) { newSettings ->
                     scope.launch { context.saveAmalorThemeSettings(newSettings) }
                 }
             }
@@ -69,6 +86,7 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun AmalorTheme(
     settings: AppThemeSettings,
+    onReady: () -> Unit,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -100,11 +118,9 @@ private fun AmalorTheme(
             value = generated
         }
     }
-    val appliedColorScheme = colorScheme ?: if (darkTheme) {
-        dynamicDarkColorScheme(context)
-    } else {
-        dynamicLightColorScheme(context)
-    }
+    // Do not draw a system/Spec 2021 placeholder before the requested palette is ready.
+    val appliedColorScheme = colorScheme ?: return
+    SideEffect { onReady() }
 
     // Set status bar appearance
     if (!view.isInEditMode) {

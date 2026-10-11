@@ -15,6 +15,7 @@ val appVersionName = (
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
     id("com.mikepenz.aboutlibraries.plugin")
 }
 
@@ -24,8 +25,8 @@ android {
 
     defaultConfig {
         applicationId = "me.acardia.amalor"
-        minSdk = 31
-        targetSdk = 36
+        minSdk = 37
+        targetSdk = 37
         versionCode = appVersionCode
         versionName = appVersionName
     }
@@ -103,5 +104,7 @@ dependencies {
     implementation("com.materialkolor:material-kolor:5.0.1")
     implementation("com.mikepenz:aboutlibraries-core:15.2.0")
     implementation("com.mikepenz:aboutlibraries-compose-m3:15.2.0")
+    compileOnly("io.github.libxposed:api:102.0.0")
+    implementation("io.github.libxposed:service:102.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -2,32 +2,43 @@ package me.acardia.amalor.ui.component
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -39,9 +50,6 @@ import androidx.compose.ui.unit.dp
 
 private val CornerRadius = 16.dp
 private val ConnectionRadius = 5.dp
-private val SpringSpec = spring<Float>(dampingRatio = 0.5f, stiffness = 800f)
-private val DpSpringSpec = spring<Dp>(dampingRatio = 0.5f, stiffness = 800f)
-
 val LocalSegmentedItemShape = compositionLocalOf<Shape> { RoundedCornerShape(0.dp) }
 
 @Immutable
@@ -102,23 +110,23 @@ fun SegmentedColumn(
             key(item.key ?: index) {
                 val topRadius by animateDpAsState(
                     if (item.forceFlatTop) 0.dp else if (index == firstVisible) CornerRadius else ConnectionRadius,
-                    DpSpringSpec,
+                    MaterialTheme.motionScheme.defaultSpatialSpec(),
                     label = "segmented_top_radius",
                 )
                 val bottomRadius by animateDpAsState(
                     if (item.forceFlatBottom) 0.dp else if (index == lastVisible) CornerRadius else ConnectionRadius,
-                    DpSpringSpec,
+                    MaterialTheme.motionScheme.defaultSpatialSpec(),
                     label = "segmented_bottom_radius",
                 )
                 val progress by animateFloatAsState(
                     if (item.visible) 1f else 0f,
-                    SpringSpec,
+                    MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "segmented_visibility",
                 )
                 val shape = RoundedCornerShape(topRadius, topRadius, bottomRadius, bottomRadius)
                 val topPadding by animateDpAsState(
                     item.customTopPadding ?: if (index == firstVisible) 0.dp else ListItemDefaults.SegmentedGap,
-                    DpSpringSpec,
+                    MaterialTheme.motionScheme.defaultSpatialSpec(),
                     label = "segmented_top_padding",
                 )
                 Box(
@@ -126,8 +134,6 @@ fun SegmentedColumn(
                         .padding(top = topPadding)
                         .graphicsLayer {
                             alpha = progress
-                            scaleY = progress
-                            transformOrigin = TransformOrigin(0.5f, 0f)
                         },
                 ) {
                     CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
@@ -148,12 +154,21 @@ fun BaseWidget(
     icon: Painter? = null,
     iconVector: ImageVector? = null,
     onClick: (() -> Unit)? = null,
+    onTrailingClick: (() -> Unit)? = null,
+    trailingDivider: Boolean = false,
     foreContent: @Composable () -> Unit = {},
     enabled: Boolean = true,
-    trailingContent: @Composable (() -> Unit)? = null,
+    trailingContent: @Composable ((MutableInteractionSource) -> Unit)? = null,
 ) {
     val internalPadding = (4 * LocalDensity.current.fontScale).dp
     val haptic = LocalHapticFeedback.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val trailingInteractionSource = remember { MutableInteractionSource() }
+    val trailingContentInteractionSource = if (onTrailingClick != null || trailingDivider) {
+        trailingInteractionSource
+    } else {
+        interactionSource
+    }
     val alpha = if (enabled) 1f else 0.38f
     val baseContentColor = MaterialTheme.colorScheme.onSurface
     val descriptionColor = baseContentColor.copy(alpha = 0.7f)
@@ -205,6 +220,7 @@ fun BaseWidget(
             },
             colors = colors,
             shapes = shapes,
+            interactionSource = interactionSource,
             leadingContent = if (icon != null || iconVector != null) {
                 {
                 when {
@@ -213,7 +229,24 @@ fun BaseWidget(
                 }
                 }
             } else null,
-            trailingContent = trailingContent,
+            trailingContent = trailingContent?.let { content ->
+                {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (trailingDivider) VerticalDivider(modifier = Modifier.height(32.dp))
+                        Box(
+                            modifier = Modifier.then(
+                                if (onTrailingClick != null) {
+                                    Modifier.clickable(
+                                        interactionSource = trailingInteractionSource,
+                                        indication = LocalIndication.current,
+                                        onClick = onTrailingClick,
+                                    )
+                                } else Modifier,
+                            ).padding(start = if (trailingDivider) 16.dp else 0.dp),
+                        ) { content(trailingContentInteractionSource) }
+                    }
+                }
+            },
             modifier = modifier.fillMaxWidth(),
         )
     } else {
@@ -238,11 +271,64 @@ fun BaseWidget(
                 }
                 }
             } else null,
-            trailingContent = trailingContent,
+            trailingContent = trailingContent?.let { content -> { content(trailingContentInteractionSource) } },
             modifier = modifier
                 .fillMaxWidth()
                 .clip(shape)
                 .then(if (enabled) Modifier else Modifier.semantics { disabled() }),
         )
     }
+}
+
+@Composable
+fun SwitchWidget(
+    modifier: Modifier = Modifier,
+    title: String,
+    description: String? = null,
+    shape: Shape,
+    icon: Painter? = null,
+    iconVector: ImageVector? = null,
+    enabled: Boolean = true,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onClick: (() -> Unit)? = null,
+    trailingDivider: Boolean = false,
+) {
+    val haptic = LocalHapticFeedback.current
+    val handleCheckedChange: (Boolean) -> Unit = { value ->
+        haptic.performHapticFeedback(
+            if (value) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+        )
+        onCheckedChange(value)
+    }
+    BaseWidget(
+        modifier = modifier,
+        title = title,
+        description = description,
+        shape = shape,
+        icon = icon,
+        iconVector = iconVector,
+        enabled = enabled,
+        onClick = onClick ?: { handleCheckedChange(!checked) },
+        trailingDivider = trailingDivider,
+        trailingContent = { interactionSource ->
+            Switch(
+                enabled = enabled,
+                checked = checked,
+                onCheckedChange = handleCheckedChange,
+                interactionSource = interactionSource,
+                colors = SwitchDefaults.colors(
+                    checkedIconColor = MaterialTheme.colorScheme.primary,
+                    uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                ),
+                thumbContent = {
+                    androidx.compose.material3.Icon(
+                        if (checked) Icons.Rounded.Check else Icons.Rounded.Close,
+                        null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                    )
+                },
+            )
+        },
+    )
 }
