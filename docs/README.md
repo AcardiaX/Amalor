@@ -2,139 +2,144 @@
 
 # Amalor
 
-**Companion management app for [Material You for ColorOS](https://github.com/Acardia/Material-You-for-ColorOS)**
+**[Material You for ColorOS](https://github.com/Acardia/Material-You-for-ColorOS) 的配套管理应用**
 
-Material 3 Expressive · Compose · Root module configuration
+Material 3 Expressive · Compose · LSPosed 模块配置
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](../LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/AcardiaX/Amalor)](https://github.com/AcardiaX/Amalor/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/AcardiaX/Amalor?label=稳定版)](https://github.com/AcardiaX/Amalor/releases/latest)
 
-**English** | [简体中文](README.CN.md)
+**简体中文** | [English](README.en.md)
 
 </div>
 
 
-## Features
+## 功能
 
+**系统界面（SystemUI）**
+- 系统界面风格：模糊 / 莫奈
+- 移动网络类型：显示位置、粗细、字体样式
+- 字体样式：官方 / 系统 / Google Rounded / 自定义
+- 规范电量显示：保持电量进度在电池内部
+- 软件更新页面 M3E 风格
+- 一键重启 SystemUI
 
-**Configuration**
-- Signal icon: Single SIM / Dual SIM
-- System UI: Blur / Monet
-- Notification card: Default width / Reduced width
+**界面**
+- Material 3 Expressive 动效与组件
+- 大屏自适应导航栏（Navigation Rail）
+- AOSP 预测性返回手势转场
+- 点击触感反馈
+- 启动页动画
+- 界面语言：简体中文 / English / Русский
 
-**Interface**
-- Material 3 Expressive motion and components
-- AOSP predictive back gesture transitions
-- Tap haptic feedback
-- Splash screen animation
-- UI languages: English / Simplified Chinese / Russian
+## 系统要求
 
-## Requirements
+- Android 17（API 37）及以上
+- 已获取 Root 权限
+- 已安装 [LSPosed](https://github.com/LSPosed/LSPosed)（提供 LibXposed 服务）
+- 已安装 Material You for ColorOS 模块
 
-- Android 12 (API 31) or later
-- Root access granted
-- Material You for ColorOS module installed
+## 构建
 
-## Building
+### 环境
 
-### Environment
-
-| Item | Version |
+| 项目 | 版本 |
 | --- | --- |
 | JDK | 25 |
 | Gradle | 9.7.1 |
 | Android Gradle Plugin | 9.3.2 |
 | Kotlin | 2.4.10 |
 | compileSdk | 37 |
-| minSdk / targetSdk | 31 / 36 |
+| minSdk / targetSdk | 37 / 37 |
 
-No manual Gradle installation is required; use the Wrapper.
+无需手动安装 Gradle，使用 Wrapper 即可。
 
-### GitHub Packages credentials
+### GitHub Packages 凭据
 
-This project depends on Miuix Navigation, which is published on GitHub Packages.
-A read-only token is required before building, otherwise the dependency cannot
-be resolved.
+本项目依赖 Miuix Navigation，它发布在 GitHub Packages 上。构建前需要提供
+只读令牌，否则无法解析依赖。
 
-Add the following to your **user-level** `~/.gradle/gradle.properties`
-(do not put it in project files):
+在**用户级** `~/.gradle/gradle.properties`（不要写进项目文件）中添加：
 
 ```properties
-gpr.user=<your GitHub username>
-gpr.key=<a token with read:packages permission>
+gpr.user=<你的 GitHub 用户名>
+gpr.key=<具有 read:packages 权限的 Token>
 ```
 
-Alternatively, use the environment variables `GITHUB_ACTOR` and `GITHUB_TOKEN`.
+也可以改用环境变量 `GITHUB_ACTOR` 与 `GITHUB_TOKEN`。
 
-> Tokens are secrets. Never commit them to the repository.
+> Token 属于机密信息，请勿提交到仓库。
 
-### Debug build
+### Debug 构建
 
 ```powershell
 .\gradlew.bat :app:assembleDebug --no-daemon
 ```
 
-Output:
+输出：
 
 ```text
-app/build/outputs/apk/debug/app-debug.apk
+app/build/outputs/apk/debug/Amalor_v<版本>_<版本号>-debug.apk
 ```
 
-Use `./gradlew` on Linux / macOS.
+Linux / macOS 使用 `./gradlew`。
 
-### Release build
+### Release 构建
 
-Create `keystore.properties` in the project root
-(this file is already ignored by `.gitignore`):
+在项目根目录创建 `keystore.properties`（该文件已被 `.gitignore` 忽略）：
 
 ```properties
 storeFile=release.jks
-storePassword=<password>
-keyAlias=<alias>
-keyPassword=<password>
+storePassword=<密码>
+keyAlias=<别名>
+keyPassword=<密码>
 ```
 
-Then run:
+然后执行：
 
 ```powershell
 .\gradlew.bat :app:assembleRelease --no-daemon
 ```
 
-Without `keystore.properties`, the Release build falls back to the debug
-signing config.
+没有配置 `keystore.properties` 时，Release 会回退使用 debug 签名。
 
-## Project structure
+## 项目结构
 
 ```text
 app/src/main/java/me/acardia/amalor/
-├── AmalorApp.kt            Main navigation, Pager, root/module state
-├── MainActivity.kt         Theme and splash
-├── SettingsStore.kt        DataStore settings persistence
-└── ui/
-    ├── home/               Home
-    ├── config/             Module configuration
-    ├── settings/           Personalization settings
-    ├── about/              About and open source licenses
-    ├── navigation/         MainPagerState fast navigation
-    ├── animation/          AOSP predictive back transitions
-    ├── component/          Shared components
-    └── theme/              Theme and palettes
+├── AmalorApp.kt            主导航、Pager、设置同步
+├── MainActivity.kt         主题与启动
+├── AmalorApplication.kt    Xposed 服务绑定与状态发布
+├── xposed/                 LSPosed 模块入口与 SystemUI Hook
+├── ui/
+│   ├── home/               主页
+│   ├── config/             系统界面配置页面
+│   ├── settings/           个性化设置
+│   ├── about/              关于与开源许可证
+│   ├── navigation/         路由与 MainPagerState 快速导航
+│   ├── component/          通用组件
+│   └── theme/              主题与调色板
+└── ...
+
+app/src/main/resources/META-INF/xposed/
+├── java_init.list          模块入口声明
+├── module.prop             LibXposed API 版本与配置
+└── scope.list              作用域（com.android.systemui）
 ```
 
-## Acknowledgements
+## 致谢
 
-Amalor references or uses code from the following open source projects:
+Amalor 在开发过程中参考了以下开源项目或使用了其代码，在此表示感谢：
 
 - [InstallerX Revived](https://github.com/wxxsfxyzm/InstallerX-Revived)
 - [KernelSU](https://github.com/tiann/KernelSU)
 - [Miuix](https://github.com/compose-miuix-ui/miuix)
 - [MaterialKolor](https://github.com/jordond/MaterialKolor)
 
-Licenses for third-party dependencies can be found in the app under
-**About → Open source licenses**.
+第三方依赖的各自许可证可在应用内 **关于 → 开放源代码许可** 中查看。
 
-## License
+## 许可证
 
-This project is licensed under [GPL-3.0](../LICENSE).
+本项目采用 [GPL-3.0](../LICENSE) 许可证。
 
-Dependencies retain their own licenses; see the in-app open source license page.
+依赖库保留其各自的许可证，详见应用内开源许可页面。
