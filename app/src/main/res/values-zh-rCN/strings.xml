@@ -1,5 +1,19 @@
 <resources>
+    <string name="config_battery_icon">电池图标</string>
+    <string name="config_battery_body_fill">规范电量显示</string>
+    <string name="config_battery_body_fill_desc">保持电量进度在电池内部</string>
+    <string name="config_other">其他</string>
+    <string name="config_software_update">软件更新</string>
+    <string name="config_replace_style">更换样式</string>
+    <string name="config_replace_style_desc">将页面更换为 M3E 风格</string>
+    <string name="amalor_version">%1$s (%2$d)</string>
+    <string name="myfc_root_not_authorized">未授权 ROOT</string>
+    <string name="module_inactive">未激活</string>
+    <string name="module_inactive_summary">请在 LSPosed 中启用模块后使用</string>
+    <string name="module_active">已激活</string>
+    <string name="myfc_status">MYFC 状态</string>
     <string name="app_name">Amalor</string>
+    <string name="app_description">为 ColorOS 17 提供一些无用功能</string>
     
     <!-- Navigation -->
     <string name="home">主页</string>
@@ -7,37 +21,21 @@
     <string name="settings">设置</string>
     
     <!-- Home screen -->
-    <string name="not_authorized">未授权 ROOT</string>
-    <string name="not_authorized_summary">请授予 ROOT 权限后使用</string>
-    <string name="installed">已安装</string>
-    <string name="installed_summary">Amalor 模块正在运行</string>
-    <string name="module_version">模块版本: %1$s</string>
     <string name="not_installed">未安装</string>
-    <string name="not_installed_summary">请安装模块后使用</string>
     <string name="device_info">设备信息</string>
     <string name="device">设备</string>
     <string name="android_version">Android 版本</string>
-    <string name="architecture">架构</string>
-    <string name="density">屏幕密度</string>
-    <string name="active_privilege">ROOT 来源</string>
-    <string name="privilege_none">未授权</string>
     <string name="privilege_unknown">未知</string>
-    <string name="privilege_root">ROOT</string>
-    <string name="privilege_root_source">%1$s（%2$s）</string>
     <string name="placeholder_page">即将推出</string>
     
     <!-- Settings -->
     <string name="settings_about">关于</string>
     <string name="settings_about_amalor">关于 Amalor</string>
     <string name="settings_app_version">应用版本: %1$s</string>
-    <string name="settings_language">语言</string>
     <string name="settings_personalization">个性化</string>
     <string name="settings_theme_mode">主题模式</string>
     <string name="settings_palette_style">调色板样式</string>
     <string name="settings_color_spec">颜色规格</string>
-    <string name="settings_dynamic_color">动态取色</string>
-    <string name="settings_dynamic_color_desc">使用壁纸颜色</string>
-    <string name="settings_theme_color">主题颜色</string>
     
     <!-- About screen -->
     <string name="about">关于</string>
@@ -52,44 +50,39 @@
     <string name="visit_home_page">访问主页</string>
     <string name="close">关闭</string>
     
-    <!-- Language options -->
-    <string name="language_follow_system">跟随系统</string>
-    <string name="language_english">English</string>
-    <string name="language_russian">Русский</string>
-    <string name="language_chinese">简体中文</string>
     
     <!-- Theme mode options -->
     <string name="theme_mode_system">跟随系统</string>
     <string name="theme_mode_light">浅色</string>
     <string name="theme_mode_dark">深色</string>
     
-    <!-- Palette style options -->
-    <string name="palette_tonal_spot">色调点</string>
-    <string name="palette_neutral">中性</string>
-    <string name="palette_vibrant">鲜艳</string>
-    <string name="palette_expressive">表现力</string>
-    <string name="palette_rainbow">彩虹</string>
-    <string name="palette_fruit_salad">水果沙拉</string>
-    <string name="palette_content">内容</string>
-    <string name="palette_monochrome">单色</string>
     
     <!-- Color spec options -->
-    <string name="color_spec_default">默认</string>
-    <string name="color_spec_content">内容</string>
     <string name="theme_settings_color_spec_only_2021">当前调色板样式仅支持 Spec 2021</string>
 
     <!-- Config -->
-    <string name="config_style">样式</string>
-    <string name="config_signal">信号图标</string>
-    <string name="config_signal_single">单卡</string>
-    <string name="config_signal_dual">双卡</string>
+    <string name="config_style">应用</string>
     <string name="config_system_ui">系统界面</string>
+    <string name="config_system_ui_desc">com.android.systemui</string>
+    <string name="config_status_bar">状态栏</string>
+    <string name="config_mobile_network">移动网络</string>
+    <string name="config_mobile_network_type">网络类型</string>
+    <string name="config_mobile_network_type_desc">显示位置、粗细、字体</string>
+    <string name="config_enable_modification">启用修改</string>
+    <string name="config_network_icon_settings">设置</string>
+    <string name="config_show_separately">单独显示</string>
+    <string name="config_show_separately_desc">将信号类型移至信号右侧</string>
+    <string name="config_bold_style">使用粗体样式</string>
+    <string name="config_bold_style_desc">将字体字重改为 Bold</string>
+    <string name="config_font_style">字体样式</string>
+    <string name="config_font_official">官方</string>
+    <string name="config_font_system">跟随系统</string>
+    <string name="config_font_google_rounded">谷歌圆</string>
+    <string name="config_font_custom">自定义</string>
+    <string name="config_save_failed">设置保存失败，请检查 LSPosed 服务后重试。</string>
+    <string name="restart_system_ui">重启系统界面？</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确定</string>
     <string name="config_system_ui_blur">模糊</string>
     <string name="config_system_ui_monet">莫奈</string>
-    <string name="config_notification_card">通知卡片</string>
-    <string name="config_notification_default">默认宽度</string>
-    <string name="config_notification_narrow">减小宽度</string>
-    <string name="save">保存</string>
-    <string name="config_save_success">保存成功</string>
-    <string name="config_save_failed">保存失败</string>
 </resources>
