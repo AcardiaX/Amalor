@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Tag
-import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,13 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import me.acardia.amalor.R
+import me.acardia.amalor.BuildConfig
 import me.acardia.amalor.ui.component.BaseWidget
 import me.acardia.amalor.ui.component.SegmentedColumn
 
@@ -47,7 +43,7 @@ import me.acardia.amalor.ui.component.SegmentedColumn
 fun HomeScreen(
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(0.dp),
-    isLoading: Boolean = false,
+    isActive: Boolean = false,
     isRootAuthorized: Boolean = false,
     isModuleInstalled: Boolean = false,
     moduleVersion: String? = null,
@@ -79,14 +75,8 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             overscrollEffect = null,
         ) {
-            if (!isLoading) {
-                item {
-                    ActivationStatusCard(
-                        isRootAuthorized = isRootAuthorized,
-                        isModuleInstalled = isModuleInstalled,
-                        moduleVersion = moduleVersion,
-                    )
-                }
+            item {
+                ActivationStatusCard(isActive = isActive)
             }
 
             item {
@@ -110,12 +100,12 @@ fun HomeScreen(
                     }
                     item { shape ->
                         BaseWidget(
-                            title = stringResource(R.string.active_privilege),
-                            description = when {
-                                !isRootAuthorized -> stringResource(R.string.privilege_none)
-                                activePrivilegeSource.isNullOrBlank() -> stringResource(R.string.privilege_unknown)
-                                else -> activePrivilegeSource
-                            },
+                            title = stringResource(R.string.myfc_status),
+                            description = if (!isRootAuthorized) {
+                                stringResource(R.string.myfc_root_not_authorized)
+                            } else if (isModuleInstalled) {
+                                "${moduleVersion ?: stringResource(R.string.privilege_unknown)} (${activePrivilegeSource ?: stringResource(R.string.privilege_unknown)})"
+                            } else "${stringResource(R.string.not_installed)} (${activePrivilegeSource ?: stringResource(R.string.privilege_unknown)})",
                             shape = shape,
                         )
                     }
@@ -127,38 +117,25 @@ fun HomeScreen(
 
 @Composable
 private fun ActivationStatusCard(
-    isRootAuthorized: Boolean,
-    isModuleInstalled: Boolean,
-    moduleVersion: String?,
+    isActive: Boolean,
 ) {
     val containerColor: Color
     val contentColor: Color
-    val icon: ImageVector?
     val titleRes: Int
-    val summaryRes: Int
 
-    if (!isRootAuthorized) {
+    if (!isActive) {
         containerColor = MaterialTheme.colorScheme.errorContainer
         contentColor = MaterialTheme.colorScheme.onErrorContainer
-        icon = Icons.Rounded.Tag
-        titleRes = R.string.not_authorized
-        summaryRes = R.string.not_authorized_summary
-    } else if (isModuleInstalled) {
+        titleRes = R.string.module_inactive
+    } else {
         containerColor = MaterialTheme.colorScheme.primaryContainer
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-        icon = null
-        titleRes = R.string.installed
-        summaryRes = R.string.installed_summary
-    } else {
-        containerColor = MaterialTheme.colorScheme.tertiaryContainer
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        icon = null
-        titleRes = R.string.not_installed
-        summaryRes = R.string.not_installed_summary
+        titleRes = R.string.module_active
     }
 
     ElevatedCard(
         onClick = {},
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = containerColor,
             contentColor = contentColor,
@@ -178,23 +155,14 @@ private fun ActivationStatusCard(
                     .padding(24.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = stringResource(titleRes),
-                        tint = contentColor,
-                        modifier = Modifier.size(24.dp),
-                    )
-                } else {
                     Icon(
                         painter = painterResource(
-                            if (isModuleInstalled) R.drawable.ic_installed else R.drawable.ic_not_installed,
+                            if (isActive) R.drawable.ic_activated else R.drawable.ic_inactive,
                         ),
                         contentDescription = stringResource(titleRes),
                         tint = contentColor,
                         modifier = Modifier.size(24.dp),
                     )
-                }
 
                 Column(modifier = Modifier.padding(start = 20.dp)) {
                     Text(
@@ -202,20 +170,11 @@ private fun ActivationStatusCard(
                         style = MaterialTheme.typography.titleMediumEmphasized,
                         color = contentColor,
                     )
-                    if (!isModuleInstalled) {
-                        Text(
-                            text = stringResource(summaryRes),
-                            style = MaterialTheme.typography.bodySmallEmphasized,
-                            color = contentColor,
-                        )
-                    }
-                    if (isModuleInstalled && moduleVersion != null) {
-                        Text(
-                            text = stringResource(R.string.module_version, moduleVersion),
-                            style = MaterialTheme.typography.bodySmallEmphasized,
-                            color = contentColor.copy(alpha = 0.7f),
-                        )
-                    }
+                    Text(
+                        text = if (isActive) stringResource(R.string.amalor_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) else stringResource(R.string.module_inactive_summary),
+                        style = MaterialTheme.typography.bodySmallEmphasized,
+                        color = contentColor.copy(alpha = if (isActive) 0.7f else 1f),
+                    )
                 }
             }
         }
@@ -226,7 +185,7 @@ private fun ActivationStatusCard(
 @Composable
 private fun PreviewNoRoot() {
     MaterialTheme {
-        HomeScreen(isRootAuthorized = false, isModuleInstalled = false)
+        HomeScreen(isActive = false, isModuleInstalled = false)
     }
 }
 
@@ -234,7 +193,7 @@ private fun PreviewNoRoot() {
 @Composable
 private fun PreviewAuthorizedNotInstalled() {
     MaterialTheme {
-        HomeScreen(isRootAuthorized = true, isModuleInstalled = false, activePrivilegeSource = "KernelSU")
+        HomeScreen(isActive = true, isModuleInstalled = false, activePrivilegeSource = "KernelSU")
     }
 }
 
@@ -242,6 +201,6 @@ private fun PreviewAuthorizedNotInstalled() {
 @Composable
 private fun PreviewInstalled() {
     MaterialTheme {
-        HomeScreen(isRootAuthorized = true, isModuleInstalled = true, moduleVersion = "v1.0.0", activePrivilegeSource = "KernelSU")
+        HomeScreen(isActive = true, isModuleInstalled = true, moduleVersion = "v1.0.0", activePrivilegeSource = "KernelSU")
     }
 }
