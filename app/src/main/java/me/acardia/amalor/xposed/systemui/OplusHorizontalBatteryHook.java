@@ -1,6 +1,6 @@
 package me.acardia.amalor.xposed.systemui;
 
-import android.graphics.Rect;
+import android.content.SharedPreferences;
 import android.graphics.drawable.LayerDrawable;
 import android.util.Log;
 
@@ -10,92 +10,66 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
-import android.content.SharedPreferences;
 import me.acardia.amalor.BatteryOptions;
 import me.acardia.amalor.NetworkTypeOptions;
 
-/** ColorOS battery pipeline: keep progress inside the body, before the terminal cap. */
+/** Normalize both ColorOS horizontal battery progress paths after native updates. */
 public final class OplusHorizontalBatteryHook {
-    private static final int BODY_END_EXCLUSION_PX = 4;
-    private static final float BODY_RATIO_FALLBACK = 5f / 6f;
-    private static final AtomicBoolean logged = new AtomicBoolean();
-    private static SharedPreferences preferences;
-
     private OplusHorizontalBatteryHook() {}
 
     public static void install(XposedModule module, ClassLoader loader) throws ReflectiveOperationException {
-        preferences = module.getRemotePreferences(NetworkTypeOptions.GROUP);
+        SharedPreferences preferences = module.getRemotePreferences(NetworkTypeOptions.GROUP);
         Class<?> base = loader.loadClass(
                 "com.oplus.systemui.statusbar.pipeline.battery.ui.drawable.BatteryBarDrawableBase");
-        Method progressLevel = base.getMethod("getProgressLevel", int.class);
-        Field layoutRect = base.getDeclaredField("rect");
-        layoutRect.setAccessible(true);
-        module.hook(progressLevel)
-                .setId("amalor-oplus-battery-progress-level")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object owner = chain.getThisObject();
-                    if (!preferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)) {
-                        return chain.proceed();
-                    }
-                    if (!owner.getClass().getName().contains("HorizontalBatteryContentDrawable")) {
-                        return chain.proceed();
-                    }
-                    int level = (Integer) chain.getArg(0);
-                    android.graphics.RectF rect = (android.graphics.RectF) layoutRect.get(owner);
-                    int width = rect == null ? 0 : Math.round(rect.width());
-                    if (width == 0 && owner instanceof android.graphics.drawable.Drawable) {
-                        width = ((android.graphics.drawable.Drawable) owner).getBounds().width();
-                    }
-                    int adjusted = level >= 100 ? level : width > BODY_END_EXCLUSION_PX
-                            ? Math.round(level * (width - BODY_END_EXCLUSION_PX) / (float) width)
-                            : Math.round(level * BODY_RATIO_FALLBACK);
-                    if (logged.compareAndSet(false, true)) {
-                        module.log(Log.INFO, "Amalor", "oplus battery progress path active level="
-                                + level + " adjusted=" + adjusted + " width=" + width);
-                    }
-                    return chain.proceed(new Object[]{adjusted});
-                });
-
-        Class<?> drawable = loader.loadClass(
+        Class<?> horizontal = loader.loadClass(
                 "com.oplus.systemui.statusbar.pipeline.battery.ui.drawable.HorizontalBatteryContentDrawable");
-        Method draw = drawable.getMethod("draw", android.graphics.Canvas.class);
-        Field progress = drawable.getDeclaredField("progressDrawable");
-        progress.setAccessible(true);
+        Method batteryLevel = horizontal.getMethod("getBatteryLevel");
+        Field inside = base.getDeclaredField("insideDrawable");
+        Field outside = horizontal.getDeclaredField("progressDrawable");
+        inside.setAccessible(true);
+        outside.setAccessible(true);
+        AtomicBoolean loggedInside = new AtomicBoolean();
+        AtomicBoolean loggedOutside = new AtomicBoolean();
 
-        module.hook(draw)
-                .setId("amalor-oplus-battery-body-fill")
-                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
-                .intercept(chain -> {
-                    Object result;
-                    try {
-                        if (!preferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)) {
-                            return chain.proceed();
-                        }
-                        Object value = progress.get(chain.getThisObject());
-                        if (value instanceof LayerDrawable) {
-                            LayerDrawable layers = (LayerDrawable) value;
-                            Rect bounds = layers.getBounds();
-                            if (!bounds.isEmpty()) {
-                                int originalRight = bounds.right;
-                                layers.setBounds(bounds.left, bounds.top,
-                                        Math.max(bounds.left, originalRight - BODY_END_EXCLUSION_PX), bounds.bottom);
-                                if (logged.compareAndSet(false, true)) {
-                                    module.log(Log.INFO, "Amalor", "oplus battery draw path active bounds="
-                                            + originalRight + " adjusted=" + layers.getBounds().right);
+        // Internal percent: superclass builds insideDrawable. External/no percent:
+        // updateProgressDrawable builds its own layer and bypasses getProgressLevel.
+        for (Method update : new Method[]{base.getMethod("updateBatteryLevel"),
+                horizontal.getMethod("updateProgressDrawable")}) {
+            boolean internal = update.getDeclaringClass() == base;
+            Field progress = internal ? inside : outside;
+            AtomicBoolean logged = internal ? loggedInside : loggedOutside;
+            module.hook(update)
+                    .setId("amalor-battery-progress:" + update.getName())
+                    .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                    .intercept(chain -> {
+                        Object result = chain.proceed();
+                        Object owner = chain.getThisObject();
+                        if (!horizontal.isInstance(owner)) return result;
+                        try {
+                            Object value = progress.get(owner);
+                            if (value instanceof LayerDrawable) {
+                                int level = (Integer) batteryLevel.invoke(owner);
+                                if (level >= 0 && level <= 100) {
+                                    boolean enabled = preferences.getBoolean(
+                                            BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED);
+                                    int mapped = enabled ? BatteryProgress.level(level) : level * 100;
+                                    ((LayerDrawable) value).setLevel(mapped);
+                                    if (logged.compareAndSet(false, true)) {
+                                        module.log(Log.INFO, "Amalor", "battery progress update active path="
+                                                + (internal ? "inside" : "outside") + " level=" + level
+                                                + " drawableLevel=" + mapped + " enabled=" + enabled);
+                                    }
                                 }
-                                try {
-                                    result = chain.proceed();
-                                } finally {
-                                    layers.setBounds(bounds);
-                                }
-                                return result;
                             }
+                        } catch (Throwable error) {
+                            module.log(Log.WARN, "Amalor", "battery progress refresh skipped", error);
                         }
-                    } catch (Throwable error) {
-                        module.log(Log.WARN, "Amalor", "oplus battery body fill adjustment skipped", error);
-                    }
-                    return chain.proceed();
-                });
+                        return result;
+                    });
+        }
+        // These small update methods can be inlined in their callers by ART.
+        module.deoptimize(horizontal.getMethod("updateBatteryLevel"));
+        module.deoptimize(horizontal.getMethod("updateDrawable"));
+        module.deoptimize(base.getMethod("setBatteryLevel", int.class));
     }
 }
