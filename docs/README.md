@@ -89,7 +89,7 @@ gpr.key=<Token>
 .\gradlew.bat :app:assembleRelease --no-daemon
 ```
 
-Linux / macOS 使用 `./gradlew`。可通过 `-PVERSION_NAME=26.11.41` 指定版本名；默认版本名来自 Git 提交日期，版本号来自提交数量。
+Linux / macOS 使用 `./gradlew`。默认版本名由 `gradle.properties` 中的 `VERSION_NAME` 指定，版本号来自 Git 提交数量；构建时可通过 `-PVERSION_NAME=1.2.0` 覆盖版本名。
 
 安装包输出到 `app/build/outputs/apk/debug/` 或 `app/build/outputs/apk/release/`，文件名为 `Amalor_v<版本名>_<版本号>-<构建类型>.apk`。
 

@@ -89,7 +89,7 @@ Alternatively, use `GITHUB_ACTOR` and `GITHUB_TOKEN` environment variables. Keep
 .\gradlew.bat :app:assembleRelease --no-daemon
 ```
 
-Use `./gradlew` on Linux / macOS. Pass `-PVERSION_NAME=26.11.41` to specify a version name. By default, the version name comes from the Git commit date and the version code from the commit count.
+Use `./gradlew` on Linux / macOS. The default version name is set by `VERSION_NAME` in `gradle.properties`, and the version code comes from the Git commit count. Pass `-PVERSION_NAME=1.2.0` to override the version name for a build.
 
 APKs are written to `app/build/outputs/apk/debug/` or `app/build/outputs/apk/release/`, named `Amalor_v<version>_<code>-<build-type>.apk`.
 
