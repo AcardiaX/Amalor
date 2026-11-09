@@ -12,6 +12,7 @@ import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
 import me.acardia.amalor.BatteryOptions;
 import me.acardia.amalor.NetworkTypeOptions;
+import me.acardia.amalor.xposed.HookLog;
 
 /** Normalize both ColorOS horizontal battery progress paths after native updates. */
 public final class OplusHorizontalBatteryHook {
@@ -30,6 +31,12 @@ public final class OplusHorizontalBatteryHook {
         outside.setAccessible(true);
         AtomicBoolean loggedInside = new AtomicBoolean();
         AtomicBoolean loggedOutside = new AtomicBoolean();
+        AtomicBoolean enabled = new AtomicBoolean(preferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED));
+        preferences.registerOnSharedPreferenceChangeListener((prefs, key) -> {
+            if (key == null || BatteryOptions.ENABLED.equals(key)) {
+                enabled.set(prefs.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED));
+            }
+        });
 
         // Internal percent: superclass builds insideDrawable. External/no percent:
         // updateProgressDrawable builds its own layer and bypasses getProgressLevel.
@@ -50,19 +57,18 @@ public final class OplusHorizontalBatteryHook {
                             if (value instanceof LayerDrawable) {
                                 int level = (Integer) batteryLevel.invoke(owner);
                                 if (level >= 0 && level <= 100) {
-                                    boolean enabled = preferences.getBoolean(
-                                            BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED);
-                                    int mapped = enabled ? BatteryProgress.level(level) : level * 100;
+                                    boolean enabledValue = enabled.get();
+                                    int mapped = enabledValue ? BatteryProgress.level(level) : level * 100;
                                     ((LayerDrawable) value).setLevel(mapped);
                                     if (logged.compareAndSet(false, true)) {
-                                        module.log(Log.INFO, "Amalor", "battery progress update active path="
+                                        HookLog.write(module, Log.DEBUG, "Amalor", "battery progress update active path="
                                                 + (internal ? "inside" : "outside") + " level=" + level
-                                                + " drawableLevel=" + mapped + " enabled=" + enabled);
+                                                 + " drawableLevel=" + mapped + " enabled=" + enabledValue);
                                     }
                                 }
                             }
                         } catch (Throwable error) {
-                            module.log(Log.WARN, "Amalor", "battery progress refresh skipped", error);
+                            HookLog.write(module, Log.WARN, "Amalor", "battery progress refresh skipped", error);
                         }
                         return result;
                     });
