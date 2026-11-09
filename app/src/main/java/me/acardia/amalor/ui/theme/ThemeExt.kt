@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.Color
 import com.materialkolor.PaletteStyle as MaterialKolorPaletteStyle
-import com.materialkolor.dynamicColorScheme
+import com.materialkolor.material3.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
 
 @Stable
@@ -29,11 +29,13 @@ fun dynamicColorScheme(
         PaletteStyle.Monochrome -> MaterialKolorPaletteStyle.Monochrome
         PaletteStyle.Fidelity -> MaterialKolorPaletteStyle.Fidelity
         PaletteStyle.Content -> MaterialKolorPaletteStyle.Content
+        PaletteStyle.Cmf -> MaterialKolorPaletteStyle.Cmf()
     }
 
-    // Apply SPEC_2025 only if explicitly requested AND supported by the style
-    val specVersion = when (colorSpec) {
-        ThemeColorSpec.SPEC_2025 -> if (style.supportsSpec2025) ColorSpec.SpecVersion.SPEC_2025 else ColorSpec.SpecVersion.SPEC_2021
+    // Resolve the supported spec without overwriting the saved preference.
+    val specVersion = when (style.effectiveSpec(colorSpec)) {
+        ThemeColorSpec.SPEC_2026 -> ColorSpec.SpecVersion.SPEC_2026
+        ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
         ThemeColorSpec.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
     }
 

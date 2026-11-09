@@ -50,9 +50,12 @@ import kotlinx.coroutines.withContext
 import me.acardia.amalor.ui.home.HomeScreen
 import me.acardia.amalor.ui.config.ConfigScreen
 import me.acardia.amalor.ui.config.SystemUiStyleScreen
+import me.acardia.amalor.ui.config.ControlCenterScreen
 import me.acardia.amalor.ui.config.StatusBarScreen
 import me.acardia.amalor.ui.config.NetworkTypeIconScreen
 import me.acardia.amalor.ui.config.SystemUiOtherScreen
+import me.acardia.amalor.ui.config.BackGestureScreen
+import me.acardia.amalor.ui.config.WeTypeScreen
 import me.acardia.amalor.ui.navigation.AmalorRoute
 import me.acardia.amalor.ui.settings.SettingsScreen
 import me.acardia.amalor.ui.about.AboutScreen
@@ -89,7 +92,18 @@ fun AmalorApp(
     var networkBold by remember { mutableStateOf(false) }
     var networkFont by remember { mutableIntStateOf(NetworkTypeOptions.OFFICIAL) }
     var packageUpdateM3e by remember { mutableStateOf(false) }
+    var nativeFeatures by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     var batteryBodyFill by remember { mutableStateOf(BatteryOptions.DEFAULT_ENABLED) }
+    var brightnessIconClipBypass by remember { mutableStateOf(BrightnessOptions.DEFAULT_ENABLED) }
+    var tileAnimationsDisabled by remember { mutableStateOf(AnimationOptions.DEFAULT_DISABLED) }
+    var logLevel by remember { mutableIntStateOf(LogOptions.INFO) }
+    var launcherLanding by remember { mutableIntStateOf(0) }
+    var launcherWidgets by remember { mutableStateOf(false) }
+    var launcherColorfulDots by remember { mutableStateOf(false) }
+    var weTypeFollowSystemFont by remember { mutableStateOf(false) }
+    var statusBarMargins by remember { mutableStateOf(false) }
+    var statusBarLeft by remember { mutableIntStateOf(0) }
+    var statusBarRight by remember { mutableIntStateOf(0) }
     var networkPreferences by remember { mutableStateOf<android.content.SharedPreferences?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val localNetworkPreferences = remember(context) {
@@ -101,12 +115,21 @@ fun AmalorApp(
         }.getOrDefault(false)
         if (saved && networkPreferences != null) {
             val synced = runCatching {
-                networkPreferences!!.edit()
+                networkPreferences!!.edit().apply {
+                    NativeFeatureOptions.KEYS.forEach { putBoolean(it, localNetworkPreferences.getBoolean(it, false)) }
+                    StatusBarMarginOptions.copyTo(localNetworkPreferences, this)
+                    LauncherIconOptions.copyTo(localNetworkPreferences, this)
+                }
                     .putInt(STATUS_BAR_MODE_KEY, localNetworkPreferences.getInt(STATUS_BAR_MODE_KEY, 0))
                     .putBoolean(NetworkTypeOptions.BOLD, localNetworkPreferences.getBoolean(NetworkTypeOptions.BOLD, false))
                     .putInt(NetworkTypeOptions.FONT, localNetworkPreferences.getInt(NetworkTypeOptions.FONT, 0))
                     .putBoolean(PackageUpdateOptions.ENABLED, localNetworkPreferences.getBoolean(PackageUpdateOptions.ENABLED, false))
                     .putBoolean(BatteryOptions.ENABLED, localNetworkPreferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED))
+                    .putBoolean(BrightnessOptions.ENABLED, localNetworkPreferences.getBoolean(BrightnessOptions.ENABLED, BrightnessOptions.DEFAULT_ENABLED))
+                    .putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, localNetworkPreferences.getBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, AnimationOptions.DEFAULT_DISABLED))
+                    .putInt(LogOptions.KEY, localNetworkPreferences.getInt(LogOptions.KEY, LogOptions.INFO))
+                    .putInt(LauncherOptions.LANDING, localNetworkPreferences.getInt(LauncherOptions.LANDING, 0))
+                    .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, localNetworkPreferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false))
                     .commit()
             }.getOrDefault(false)
             if (synced) localNetworkPreferences.edit().putBoolean("pending_sync", false).apply()
@@ -120,17 +143,37 @@ fun AmalorApp(
         networkBold = localNetworkPreferences.getBoolean(NetworkTypeOptions.BOLD, false)
         networkFont = NetworkTypeOptions.supportedFont(localNetworkPreferences.getInt(NetworkTypeOptions.FONT, 0))
         packageUpdateM3e = localNetworkPreferences.getBoolean(PackageUpdateOptions.ENABLED, false)
+        nativeFeatures = NativeFeatureOptions.KEYS.associateWith { localNetworkPreferences.getBoolean(it, false) }
         batteryBodyFill = localNetworkPreferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)
+        brightnessIconClipBypass = localNetworkPreferences.getBoolean(BrightnessOptions.ENABLED, BrightnessOptions.DEFAULT_ENABLED)
+        tileAnimationsDisabled = localNetworkPreferences.getBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, AnimationOptions.DEFAULT_DISABLED)
+        logLevel = localNetworkPreferences.getInt(LogOptions.KEY, LogOptions.INFO).coerceIn(0, 2)
+        launcherLanding = localNetworkPreferences.getInt(LauncherOptions.LANDING, 0).coerceIn(0, 10)
+        launcherWidgets = localNetworkPreferences.getBoolean(LauncherIconOptions.WIDGETS, false)
+        launcherColorfulDots = localNetworkPreferences.getBoolean(LauncherIconOptions.COLORFUL_DOTS, false)
+        weTypeFollowSystemFont = localNetworkPreferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false)
+        statusBarMargins = localNetworkPreferences.getBoolean(StatusBarMarginOptions.ENABLED, false)
+        statusBarLeft = StatusBarMarginOptions.offset(localNetworkPreferences.getInt(StatusBarMarginOptions.LEFT, 0))
+        statusBarRight = StatusBarMarginOptions.offset(localNetworkPreferences.getInt(StatusBarMarginOptions.RIGHT, 0))
         xposedService?.let { service ->
             val preferences = runCatching { service.getRemotePreferences(STATUS_BAR_PREFERENCES_GROUP) }
                 .getOrNull() ?: return@let
             if (localNetworkPreferences.getBoolean("pending_sync", false)) {
                 val synced = runCatching {
-                    preferences.edit().putInt(STATUS_BAR_MODE_KEY, statusBarMode)
+                    preferences.edit().apply {
+                        NativeFeatureOptions.KEYS.forEach { putBoolean(it, nativeFeatures[it] == true) }
+                        StatusBarMarginOptions.copyTo(localNetworkPreferences, this)
+                        LauncherIconOptions.copyTo(localNetworkPreferences, this)
+                    }.putInt(STATUS_BAR_MODE_KEY, statusBarMode)
                         .putBoolean(NetworkTypeOptions.BOLD, networkBold)
                         .putInt(NetworkTypeOptions.FONT, networkFont)
                         .putBoolean(PackageUpdateOptions.ENABLED, packageUpdateM3e)
-                        .putBoolean(BatteryOptions.ENABLED, batteryBodyFill).commit()
+                        .putBoolean(BatteryOptions.ENABLED, batteryBodyFill)
+                        .putBoolean(BrightnessOptions.ENABLED, brightnessIconClipBypass)
+                        .putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, tileAnimationsDisabled)
+                        .putInt(LogOptions.KEY, logLevel)
+                        .putInt(LauncherOptions.LANDING, launcherLanding)
+                        .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont).commit()
                 }.getOrDefault(false)
                 if (!synced) return@let
                 localNetworkPreferences.edit().putBoolean("pending_sync", false).apply()
@@ -141,13 +184,33 @@ fun AmalorApp(
             networkBold = preferences.getBoolean(NetworkTypeOptions.BOLD, false)
             networkFont = NetworkTypeOptions.supportedFont(preferences.getInt(NetworkTypeOptions.FONT, NetworkTypeOptions.OFFICIAL))
             packageUpdateM3e = preferences.getBoolean(PackageUpdateOptions.ENABLED, false)
+            nativeFeatures = NativeFeatureOptions.KEYS.associateWith { preferences.getBoolean(it, false) }
             batteryBodyFill = preferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)
+            brightnessIconClipBypass = preferences.getBoolean(BrightnessOptions.ENABLED, BrightnessOptions.DEFAULT_ENABLED)
+            tileAnimationsDisabled = preferences.getBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, AnimationOptions.DEFAULT_DISABLED)
+            logLevel = preferences.getInt(LogOptions.KEY, LogOptions.INFO).coerceIn(0, 2)
+            launcherLanding = preferences.getInt(LauncherOptions.LANDING, 0).coerceIn(0, 10)
+            launcherWidgets = preferences.getBoolean(LauncherIconOptions.WIDGETS, false)
+            launcherColorfulDots = preferences.getBoolean(LauncherIconOptions.COLORFUL_DOTS, false)
+            weTypeFollowSystemFont = preferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false)
+            statusBarMargins = preferences.getBoolean(StatusBarMarginOptions.ENABLED, false)
+            statusBarLeft = StatusBarMarginOptions.offset(preferences.getInt(StatusBarMarginOptions.LEFT, 0))
+            statusBarRight = StatusBarMarginOptions.offset(preferences.getInt(StatusBarMarginOptions.RIGHT, 0))
             networkPreferences = preferences
-            localNetworkPreferences.edit().putInt(STATUS_BAR_MODE_KEY, statusBarMode)
+            localNetworkPreferences.edit().apply {
+                NativeFeatureOptions.KEYS.forEach { putBoolean(it, nativeFeatures[it] == true) }
+                StatusBarMarginOptions.copyTo(preferences, this)
+                LauncherIconOptions.copyTo(preferences, this)
+            }.putInt(STATUS_BAR_MODE_KEY, statusBarMode)
                 .putBoolean(NetworkTypeOptions.BOLD, networkBold)
                 .putInt(NetworkTypeOptions.FONT, networkFont)
                 .putBoolean(PackageUpdateOptions.ENABLED, packageUpdateM3e)
-                .putBoolean(BatteryOptions.ENABLED, batteryBodyFill).apply()
+                .putBoolean(BatteryOptions.ENABLED, batteryBodyFill)
+                .putBoolean(BrightnessOptions.ENABLED, brightnessIconClipBypass)
+                .putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, tileAnimationsDisabled)
+                .putInt(LogOptions.KEY, logLevel)
+                .putInt(LauncherOptions.LANDING, launcherLanding)
+                .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont).apply()
         }
     }
     val windowInfo = LocalWindowInfo.current
@@ -239,57 +302,177 @@ fun AmalorApp(
                          Page.HOME -> HomeScreen(outerPadding = mainPadding, isActive = xposedService != null, isRootAuthorized = rootState?.authorized == true, isModuleInstalled = rootState?.moduleInstalled == true, moduleVersion = rootState?.moduleVersion, activePrivilegeSource = rootState?.source, deviceName = rootState?.deviceName ?: "")
                         Page.CONFIG -> ConfigScreen(
                             outerPadding = mainPadding,
-                            onOpenSystemUi = { navigator.push(AmalorRoute.SystemUiStyle) },
+                             onOpenSystemUi = { navigator.push(AmalorRoute.SystemUiStyle) },
+                             onOpenLauncher = { navigator.push(AmalorRoute.Launcher) },
+                             onOpenWeType = { navigator.push(AmalorRoute.WeType) },
                         )
-                        Page.SETTINGS -> SettingsScreen(outerPadding = mainPadding, settings = themeSettings, onSettingsChange = onThemeSettingsChange, onOpenAbout = { navigator.push(AmalorRoute.About) })
+                         Page.SETTINGS -> SettingsScreen(
+                             outerPadding = mainPadding, settings = themeSettings,
+                             onSettingsChange = onThemeSettingsChange,
+                             logLevel = logLevel,
+                             onLogLevelChange = { value ->
+                                 if (saveNetworkOption { putInt(LogOptions.KEY, value) }) logLevel = value
+                             },
+                             onOpenAbout = { navigator.push(AmalorRoute.About) },
+                         )
                     }
                             }
                         }
                     }
                 }
             }
+            entry<AmalorRoute.Launcher>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                me.acardia.amalor.ui.config.LauncherScreen(
+                    onOpenPages = { navigator.push(AmalorRoute.LauncherPages) },
+                    onOpenIcons = { navigator.push(AmalorRoute.LauncherIcons) },
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.BackGesture>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                BackGestureScreen(
+                    checked = nativeFeatures[NativeFeatureOptions.BACK_PANEL] == true,
+                    predictive = nativeFeatures[NativeFeatureOptions.BACK_PREDICTIVE_ANIMATION] == true,
+                    onCheckedChange = { value ->
+                        if (saveNetworkOption { putBoolean(NativeFeatureOptions.BACK_PANEL, value) })
+                            nativeFeatures = nativeFeatures + (NativeFeatureOptions.BACK_PANEL to value)
+                    },
+                    onPredictiveChange = { value ->
+                        if (saveNetworkOption { putBoolean(NativeFeatureOptions.BACK_PREDICTIVE_ANIMATION, value) })
+                            nativeFeatures = nativeFeatures + (NativeFeatureOptions.BACK_PREDICTIVE_ANIMATION to value)
+                    },
+                    canRestart = rootState?.authorized == true,
+                    onRestart = ::restartBackGesture,
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.WeType>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                WeTypeScreen(
+                    followSystemFont = weTypeFollowSystemFont,
+                    onFollowSystemFontChange = { value ->
+                        if (saveNetworkOption { putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, value) }) weTypeFollowSystemFont = value
+                    },
+                    canRestart = rootState?.authorized == true,
+                    onRestart = ::restartWeType,
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.LauncherPages>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                var expanded by remember {
+                    mutableStateOf(localNetworkPreferences.getBoolean(LauncherOptions.EXPANDED, false))
+                }
+                me.acardia.amalor.ui.config.LauncherPagesScreen(
+                    landing = launcherLanding,
+                    expanded = expanded,
+                    canRestartLauncher = rootState?.authorized == true,
+                    onRestartLauncher = ::restartLauncher,
+                    onLandingChange = { value ->
+                        if (saveNetworkOption { putInt(LauncherOptions.LANDING, value) }) launcherLanding = value
+                    },
+                    onExpandedChange = { value ->
+                        localNetworkPreferences.edit().putBoolean(LauncherOptions.EXPANDED, value).apply()
+                        expanded = value
+                    },
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.LauncherIcons>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                me.acardia.amalor.ui.config.LauncherIconsScreen(
+                    widgets = launcherWidgets,
+                    colorfulDots = launcherColorfulDots,
+                    onWidgetsChange = { value ->
+                        if (saveNetworkOption { putBoolean(LauncherIconOptions.WIDGETS, value) }) launcherWidgets = value
+                    },
+                    onColorfulDotsChange = { value ->
+                        if (saveNetworkOption { putBoolean(LauncherIconOptions.COLORFUL_DOTS, value) }) launcherColorfulDots = value
+                    },
+                    canRestartLauncher = rootState?.authorized == true,
+                    onRestartLauncher = ::restartLauncher,
+                    onBack = { navigator.pop() },
+                )
+            }
             entry<AmalorRoute.SystemUiStyle>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 SystemUiStyleScreen(
-                    style = rootState?.config?.style ?: ModuleConfig.default.style,
-                    enabled = rootState?.authorized == true && rootState?.moduleInstalled == true,
                     onBack = { navigator.pop() },
-                    onStyleChange = { style ->
-                                val state = rootState ?: return@SystemUiStyleScreen
-                                val requested = ModuleConfig(style)
-                                if (state.config == requested) return@SystemUiStyleScreen
-                                scope.launch(Dispatchers.IO) {
-                                    val applied = writeModuleStyle(style)
-                                    withContext(Dispatchers.Main) {
-                                        rootState = rootState?.copy(
-                                            config = if (applied) requested else rootState?.config ?: ModuleConfig.default,
-                                        )
-                                    }
-                                }
-                            },
                     onOpenStatusBar = { navigator.push(AmalorRoute.StatusBar) },
+                    onOpenControlCenter = { navigator.push(AmalorRoute.ControlCenter) },
                     onOpenOther = { navigator.push(AmalorRoute.SystemUiOther) },
+                    materialEnabled = nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true,
+                    onMaterialChange = { value ->
+                        if ((nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true) != value &&
+                            saveNetworkOption { putBoolean(NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE, value) }) {
+                            nativeFeatures = nativeFeatures + (NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE to value)
+                        }
+                    },
+                    canRestartSystemUi = rootState?.authorized == true,
+                    onRestartSystemUi = ::restartSystemUi,
+                )
+            }
+            entry<AmalorRoute.ControlCenter>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                ControlCenterScreen(
+                    brightnessIconClipBypass = brightnessIconClipBypass,
+                    onBrightnessIconClipBypassChange = { value ->
+                        if (saveNetworkOption { putBoolean(BrightnessOptions.ENABLED, value) }) brightnessIconClipBypass = value
+                    },
+                    tileAnimationsDisabled = tileAnimationsDisabled,
+                    onTileAnimationsDisabledChange = { value ->
+                        if (saveNetworkOption { putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, value) }) tileAnimationsDisabled = value
+                    },
+                    canRestartSystemUi = rootState?.authorized == true,
+                    onRestartSystemUi = ::restartSystemUi,
+                    onBack = { navigator.pop() },
                 )
             }
             entry<AmalorRoute.SystemUiOther>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 SystemUiOtherScreen(
                     packageUpdateM3e = packageUpdateM3e,
-                    canRestartSystemUi = rootState?.authorized == true && rootState?.moduleInstalled == true,
+                    nativeFeatures = nativeFeatures,
+                    onNativeFeatureChange = { key, value ->
+                        if (saveNetworkOption { putBoolean(key, value) }) nativeFeatures = nativeFeatures + (key to value)
+                    },
+                    canRestartSystemUi = rootState?.authorized == true,
                     onRestartSystemUi = ::restartSystemUi,
                     onPackageUpdateM3eChange = { value ->
                         if (saveNetworkOption { putBoolean(PackageUpdateOptions.ENABLED, value) }) packageUpdateM3e = value
                     },
                     onBack = { navigator.pop() },
+                    onOpenBackGesture = { navigator.push(AmalorRoute.BackGesture) },
                 )
             }
             entry<AmalorRoute.StatusBar>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                var marginsExpanded by remember {
+                    mutableStateOf(localNetworkPreferences.getBoolean(StatusBarMarginOptions.EXPANDED, false))
+                }
                 StatusBarScreen(
                     mode = statusBarMode,
+                    marginsExpanded = marginsExpanded,
+                    onMarginsExpandedChange = { value ->
+                        localNetworkPreferences.edit().putBoolean(StatusBarMarginOptions.EXPANDED, value).apply()
+                        marginsExpanded = value
+                    },
+                    leftMargin = statusBarLeft,
+                    rightMargin = statusBarRight,
+                    onMarginsEnabledChange = { value ->
+                        if (saveNetworkOption { putBoolean(StatusBarMarginOptions.ENABLED, value) }) statusBarMargins = value
+                    },
+                    onLeftMarginChange = { value ->
+                        val offset = StatusBarMarginOptions.offset(value)
+                        if (saveNetworkOption { putInt(StatusBarMarginOptions.LEFT, offset) }) statusBarLeft = offset
+                    },
+                    onRightMarginChange = { value ->
+                        val offset = StatusBarMarginOptions.offset(value)
+                        if (saveNetworkOption { putInt(StatusBarMarginOptions.RIGHT, offset) }) statusBarRight = offset
+                    },
                     batteryBodyFill = batteryBodyFill,
                     onBatteryBodyFillChange = { value ->
                         if (saveNetworkOption { putBoolean(BatteryOptions.ENABLED, value) }) batteryBodyFill = value
                     },
+                    hideNonDataSim = nativeFeatures[NativeFeatureOptions.HIDE_NON_DATA_SIM] == true,
+                    onHideNonDataSimChange = { value ->
+                        if (saveNetworkOption { putBoolean(NativeFeatureOptions.HIDE_NON_DATA_SIM, value) })
+                            nativeFeatures = nativeFeatures + (NativeFeatureOptions.HIDE_NON_DATA_SIM to value)
+                    },
                     onBack = { navigator.pop() },
-                    canRestartSystemUi = rootState?.authorized == true && rootState?.moduleInstalled == true,
+                    canRestartSystemUi = rootState?.authorized == true,
                     onRestartSystemUi = ::restartSystemUi,
                     onOpenNetworkType = { navigator.push(AmalorRoute.NetworkTypeIcon) },
                     onModeChange = { mode ->
@@ -300,7 +483,7 @@ fun AmalorApp(
             entry<AmalorRoute.NetworkTypeIcon>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 NetworkTypeIconScreen(
                     enabled = true,
-                    canRestartSystemUi = rootState?.authorized == true && rootState?.moduleInstalled == true,
+                    canRestartSystemUi = rootState?.authorized == true,
                     onRestartSystemUi = ::restartSystemUi,
                     checked = statusBarMode != 0,
                     bold = networkBold,
@@ -323,13 +506,20 @@ fun AmalorApp(
         }
 }
 
-private fun writeModuleStyle(style: Int): Boolean = runCatching {
-    val command = "sed -i 's/^systemui_style=.*/systemui_style=\"$style\"/' /data/adb/modules/material_you_for_coloros/config.conf"
-    Runtime.getRuntime().exec(arrayOf("su", "-c", command)).waitFor() == 0
+private fun restartLauncher(): Boolean = runCatching {
+    Runtime.getRuntime().exec(arrayOf("su", "-c", "killall com.android.launcher")).waitFor() == 0
+}.getOrDefault(false)
+
+private fun restartWeType(): Boolean = runCatching {
+    Runtime.getRuntime().exec(arrayOf("su", "-c", "killall ${WeTypeOptions.PACKAGE_NAME} ${WeTypeOptions.IME_PROCESS}")).waitFor() == 0
 }.getOrDefault(false)
 
 private fun restartSystemUi(): Boolean = runCatching {
     Runtime.getRuntime().exec(arrayOf("su", "-c", "killall com.android.systemui")).waitFor() == 0
+}.getOrDefault(false)
+
+private fun restartBackGesture(): Boolean = runCatching {
+    Runtime.getRuntime().exec(arrayOf("su", "-c", "killall com.android.systemui com.android.launcher")).waitFor() == 0
 }.getOrDefault(false)
 
 private const val STATUS_BAR_PREFERENCES_GROUP = NetworkTypeOptions.GROUP

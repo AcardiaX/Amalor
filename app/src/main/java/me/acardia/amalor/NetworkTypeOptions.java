@@ -9,12 +9,12 @@ public final class NetworkTypeOptions {
     public static final int OFFICIAL = 0;
     public static final int SYSTEM = 1;
     public static final int GOOGLE_ROUNDED = 2;
-    public static final int CUSTOM = 3;
+    public static final int PIXEL = 3;
 
     private NetworkTypeOptions() {}
 
     public static int supportedFont(int font) {
-        return font == SYSTEM || font == GOOGLE_ROUNDED ? font : OFFICIAL;
+        return font >= SYSTEM && font <= PIXEL ? font : OFFICIAL;
     }
 
     public static boolean isActive(int mode) {
@@ -22,7 +22,6 @@ public final class NetworkTypeOptions {
     }
 
     public static boolean canUseBold(int mode, int font) {
-        // Custom fonts are not implemented; only the system family has selectable weights.
         return isActive(mode) && font == SYSTEM;
     }
 }

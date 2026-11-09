@@ -52,6 +52,25 @@ private val CornerRadius = 16.dp
 private val ConnectionRadius = 5.dp
 val LocalSegmentedItemShape = compositionLocalOf<Shape> { RoundedCornerShape(0.dp) }
 
+@Composable
+fun rememberExpandableItemShape(expanded: Boolean, pressed: Boolean): Shape {
+    val bottomRadius = animateDpAsState(
+        targetValue = if (pressed || !expanded) CornerRadius else 4.dp,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "expandable_item_bottom_radius",
+    )
+    return remember {
+        object : Shape {
+            override fun createOutline(
+                size: androidx.compose.ui.geometry.Size,
+                layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+                density: androidx.compose.ui.unit.Density,
+            ) = RoundedCornerShape(CornerRadius, CornerRadius, bottomRadius.value, bottomRadius.value)
+                .createOutline(size, layoutDirection, density)
+        }
+    }
+}
+
 @Immutable
 internal data class SegmentedItem(
     val key: Any?,
@@ -159,15 +178,18 @@ fun BaseWidget(
     foreContent: @Composable () -> Unit = {},
     enabled: Boolean = true,
     trailingContent: @Composable ((MutableInteractionSource) -> Unit)? = null,
+    interactionSource: MutableInteractionSource? = null,
+    pressedShape: Shape = RoundedCornerShape(CornerRadius),
+    centerContent: Boolean = false,
 ) {
     val internalPadding = (4 * LocalDensity.current.fontScale).dp
     val haptic = LocalHapticFeedback.current
-    val interactionSource = remember { MutableInteractionSource() }
+    val resolvedInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
     val trailingInteractionSource = remember { MutableInteractionSource() }
     val trailingContentInteractionSource = if (onTrailingClick != null || trailingDivider) {
         trailingInteractionSource
     } else {
-        interactionSource
+        resolvedInteractionSource
     }
     val alpha = if (enabled) 1f else 0.38f
     val baseContentColor = MaterialTheme.colorScheme.onSurface
@@ -195,7 +217,7 @@ fun BaseWidget(
     )
     val shapes = ListItemDefaults.shapes(
         shape = shape,
-        pressedShape = RoundedCornerShape(CornerRadius),
+        pressedShape = pressedShape,
         selectedShape = shape,
         focusedShape = shape,
         hoveredShape = shape,
@@ -208,6 +230,7 @@ fun BaseWidget(
             },
             enabled = enabled,
             content = headline,
+            verticalAlignment = if (centerContent) Alignment.CenterVertically else ListItemDefaults.verticalAlignment(),
             supportingContent = description?.let { text ->
                 {
                     Text(
@@ -220,7 +243,7 @@ fun BaseWidget(
             },
             colors = colors,
             shapes = shapes,
-            interactionSource = interactionSource,
+            interactionSource = resolvedInteractionSource,
             leadingContent = if (icon != null || iconVector != null) {
                 {
                 when {
@@ -293,6 +316,7 @@ fun SwitchWidget(
     onCheckedChange: (Boolean) -> Unit,
     onClick: (() -> Unit)? = null,
     trailingDivider: Boolean = false,
+    centerContent: Boolean = false,
 ) {
     val haptic = LocalHapticFeedback.current
     val handleCheckedChange: (Boolean) -> Unit = { value ->
@@ -311,6 +335,7 @@ fun SwitchWidget(
         enabled = enabled,
         onClick = onClick ?: { handleCheckedChange(!checked) },
         trailingDivider = trailingDivider,
+        centerContent = centerContent,
         trailingContent = { interactionSource ->
             Switch(
                 enabled = enabled,

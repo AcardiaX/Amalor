@@ -1,15 +1,84 @@
 <resources>
+    <!-- WeType keyboard -->
+    <string name="config_wetype">WeType</string>
+    <string name="config_font_group">Шрифт</string>
+    <string name="wetype_follow_system_font_desc">Использовать системный шрифт для текста клавиатуры</string>
+    <string name="restart_wetype">Перезапустить WeType?</string>
+    <!-- Launcher app icons -->
+    <string name="launcher_icons_group">Значки</string>
+    <string name="launcher_app_icons">Значки приложений</string>
+    <string name="launcher_widgets_menu_title">Показывать пункт виджетов</string>
+    <string name="launcher_widgets_menu_desc">Показывать системный пункт виджетов в меню долгого нажатия</string>
+    <string name="launcher_notification_badge_colors_title">Цвета значков уведомлений</string>
+    <string name="launcher_notification_badge_colors_desc">Создавать цвета Monet из значков приложений для точек уведомлений и числовых индикаторов</string>
+    <!-- Status bar layout -->
+    <string name="statusbar_layout_group">Макет</string>
+    <string name="statusbar_margins_title">Отступы строки состояния</string>
+    <string name="statusbar_margins_desc">Настройка отступов строки состояния</string>
+    <string name="statusbar_margin_left">Левый отступ</string>
+    <string name="statusbar_margin_right">Правый отступ</string>
+    <string name="statusbar_margin_value">%1$d dp</string>
+    <string name="statusbar_margin_reset">Сбросить отступ</string>
+    <!-- Системный лаунчер -->
+    <string name="launcher_pages">Макет страниц</string>
+    <string name="restart_launcher">Перезапустить системный лаунчер?</string>
+    <string name="config_launcher">Системный лаунчер</string>
+    <string name="launcher_main_screen">Главный экран</string>
+    <string name="launcher_custom_home_screen_title">Настроить главный экран</string>
+    <string name="launcher_custom_home_screen_desc">Настроить главный экран системного лаунчера</string>
+    <string name="launcher_reset_home_screen">Сбросить главный экран по умолчанию</string>
+    <string name="expand_settings">Развернуть</string>
+    <string name="collapse_settings">Свернуть</string>
+    <string name="settings_log_level">Уровень журналирования</string>
+    <string name="log_level_info">Информация</string>
+    <string name="log_level_debug">Отладка</string>
+    <string name="log_level_off">Выключено</string>
+    <!-- Системный интерфейс: нативные функции -->
+    <string name="config_native_features">Нативные функции</string>
+    <string name="config_native_power">Нативное меню питания</string>
+    <string name="config_native_power_desc">Использовать нативное оформление меню питания</string>
+    <string name="config_back_gesture">Жесты возврата</string>
+    <string name="config_back_gesture_desc">Стиль, предиктивный возврат</string>
+    <string name="config_native_style">Нативный стиль</string>
+    <string name="config_native_predictive_back">Нативная предиктивная анимация возврата</string>
+    <string name="config_native_predictive_back_desc">Использовать нативные предиктивные анимации возврата</string>
+    <string name="restart_scopes">Перезапустить следующие области действия?</string>
+    <string name="config_native_volume">Нативная панель громкости</string>
+    <string name="config_native_volume_desc">Использовать нативную панель громкости</string>
+    <string name="config_native_clipboard">Нативный буфер обмена</string>
+    <string name="config_native_clipboard_desc">Принудительно включить нативный буфер обмена</string>
+    <!-- Строка состояния: батарея -->
+    <string name="config_battery_icon">Значок батареи</string>
+    <string name="config_tile_icons">Значки плиток</string>
+    <string name="config_auto_brightness_icon_clip_bypass">Оптимизировать значок автояркости</string>
+    <string name="config_auto_brightness_icon_clip_bypass_desc">Не обрезать значок автояркости</string>
+    <string name="config_battery_level_display">Корректное отображение заряда</string>
+    <string name="config_battery_level_display_desc">Ограничить индикатор заряда корпусом батареи</string>
+    <string name="config_other">Прочее</string>
+    <string name="config_software_update">Обновление приложений</string>
+    <string name="config_replace_style">Изменить оформление</string>
+    <string name="config_replace_style_desc">Оформить экран в стиле M3E</string>
+    <string name="amalor_version">%1$s (%2$d)</string>
+    <string name="root_not_authorized">ROOT не авторизован</string>
+    <string name="module_inactive">Не активирован</string>
+    <string name="module_inactive_summary">Включите модуль в LSPosed для использования</string>
+    <string name="module_active">Активирован</string>
+    <string name="myfc_status">Состояние MYFC</string>
+    <string name="config_save_failed">Не удалось сохранить настройки. Проверьте службу LSPosed и повторите попытку.</string>
     <string name="app_name">Amalor</string>
-    <string name="app_description">Несколько бесполезных функций для ColorOS 17</string>
+    <string name="app_description">Несколько вкусных функций для ColorOS 17 😋</string>
+    <!-- Навигация -->
     <string name="home">Главная</string>
     <string name="config">Конфигурация</string>
     <string name="settings">Настройки</string>
+    <!-- Главный экран -->
     <string name="not_installed">Не установлен</string>
     <string name="device_info">Информация об устройстве</string>
     <string name="device">Устройство</string>
     <string name="android_version">Версия Android</string>
     <string name="privilege_unknown">Неизвестно</string>
     <string name="placeholder_page">Скоро</string>
+    <!-- Настройки -->
     <string name="settings_about">О приложении</string>
     <string name="settings_about_amalor">Об Amalor</string>
     <string name="settings_app_version">Версия приложения: %1$s</string>
@@ -32,15 +101,21 @@
     <string name="theme_mode_light">Светлая</string>
     <string name="theme_mode_dark">Тёмная</string>
     <string name="theme_settings_color_spec_only_2021">Текущий стиль палитры поддерживает только Spec 2021</string>
-    <string name="config_style">Приложение</string>
+    <string name="theme_settings_color_spec_only_2026">Текущий стиль палитры поддерживает только Spec 2026</string>
+    <string name="config_apps_group">Приложения</string>
     <string name="config_system_ui">Системный интерфейс</string>
-    <string name="config_system_ui_desc">com.android.systemui</string>
+    <string name="config_control_center">Центр управления</string>
+    <string name="config_disable_tile_icon_animation">Отключить анимацию значков</string>
+    <string name="config_disable_tile_icon_animation_desc">Отключить Lottie-анимации значков плиток</string>
+    <string name="config_system_ui_package">com.android.systemui</string>
     <string name="config_status_bar">Строка состояния</string>
     <string name="config_mobile_network">Мобильная сеть</string>
+    <string name="config_hide_non_data_sim">Скрывать SIM без передачи данных</string>
+    <string name="config_hide_non_data_sim_desc">Скрывать SIM без передачи данных при раздельных значках сигнала</string>
     <string name="config_mobile_network_type">Тип сети</string>
     <string name="config_mobile_network_type_desc">Положение, толщина и шрифт</string>
     <string name="config_enable_modification">Включить изменение</string>
-    <string name="config_network_icon_settings">Настройки</string>
+    <string name="config_network_type_options">Настройки</string>
     <string name="config_show_separately">Показывать отдельно</string>
     <string name="config_show_separately_desc">Переместить тип сети вправо от сигнала</string>
     <string name="config_bold_style">Использовать жирный стиль</string>
@@ -49,7 +124,7 @@
     <string name="config_font_official">Официальный</string>
     <string name="config_font_system">Системный</string>
     <string name="config_font_google_rounded">Google Rounded</string>
-    <string name="config_font_custom">Пользовательский</string>
+    <string name="config_font_pixel">Pixel</string>
     <string name="restart_system_ui">Перезапустить System UI?</string>
     <string name="cancel">Отмена</string>
     <string name="confirm">Подтвердить</string>

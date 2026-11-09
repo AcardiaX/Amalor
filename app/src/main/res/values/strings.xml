@@ -1,28 +1,83 @@
 <resources>
+    <!-- WeType keyboard -->
+    <string name="config_wetype">WeType</string>
+    <string name="config_font_group">Font</string>
+    <string name="wetype_follow_system_font_desc">Use the system font for keyboard text</string>
+    <string name="restart_wetype">Restart WeType?</string>
+    <!-- Launcher app icons -->
+    <string name="launcher_icons_group">Icons</string>
+    <string name="launcher_app_icons">App icons</string>
+    <string name="launcher_widgets_menu_title">Show widgets entry</string>
+    <string name="launcher_widgets_menu_desc">Show the native widgets entry in the long-press menu</string>
+    <string name="launcher_notification_badge_colors_title">Notification badge colors</string>
+    <string name="launcher_notification_badge_colors_desc">Generate Monet colors from app icons for notification dots and number badges</string>
+    <!-- Status bar layout -->
+    <string name="statusbar_layout_group">Layout</string>
+    <string name="statusbar_margins_title">Status bar margins</string>
+    <string name="statusbar_margins_desc">Customize status bar margins</string>
+    <string name="statusbar_margin_left">Left margin</string>
+    <string name="statusbar_margin_right">Right margin</string>
+    <string name="statusbar_margin_value">%1$d dp</string>
+    <string name="statusbar_margin_reset">Reset margin</string>
+    <!-- System launcher -->
+    <string name="launcher_pages">Page layout</string>
+    <string name="restart_launcher">Restart System launcher?</string>
+    <string name="config_launcher">System launcher</string>
+    <string name="launcher_main_screen">Home screen</string>
+    <string name="launcher_custom_home_screen_title">Customize home screen</string>
+    <string name="launcher_custom_home_screen_desc">Customize the system launcher home screen</string>
+    <string name="launcher_reset_home_screen">Reset home screen to default</string>
+    <string name="expand_settings">Expand</string>
+    <string name="collapse_settings">Collapse</string>
+    <string name="settings_log_level">Log level</string>
+    <string name="log_level_info">Information</string>
+    <string name="log_level_debug">Debug</string>
+    <string name="log_level_off">Off</string>
+    <!-- System UI: native features -->
+    <string name="config_native_features">Native features</string>
+    <string name="config_native_power">Native power menu</string>
+    <string name="config_native_power_desc">Use the native power menu style</string>
+    <string name="config_back_gesture">Back gestures</string>
+    <string name="config_back_gesture_desc">Style, predictive back</string>
+    <string name="config_native_style">Native style</string>
+    <string name="config_native_predictive_back">Native predictive back animation</string>
+    <string name="config_native_predictive_back_desc">Use native predictive back animations</string>
+    <string name="restart_scopes">Restart the following scopes?</string>
+    <string name="config_native_volume">Native volume panel</string>
+    <string name="config_native_volume_desc">Use the native volume panel</string>
+    <string name="config_native_clipboard">Native clipboard</string>
+    <string name="config_native_clipboard_desc">Force enable the native clipboard</string>
+    <!-- Status bar: battery -->
     <string name="config_battery_icon">Battery icon</string>
-    <string name="config_battery_body_fill">Normalize battery display</string>
-    <string name="config_battery_body_fill_desc">Keep the battery progress inside the battery body</string>
+    <string name="config_tile_icons">Tile icons</string>
+    <string name="config_auto_brightness_icon_clip_bypass">Optimize automatic brightness icon</string>
+    <string name="config_auto_brightness_icon_clip_bypass_desc">Prevent clipping the automatic brightness icon</string>
+    <string name="config_battery_level_display">Normalize battery display</string>
+    <string name="config_battery_level_display_desc">Keep the battery progress inside the battery body</string>
     <string name="config_other">Other</string>
     <string name="config_software_update">Software update</string>
     <string name="config_replace_style">Replace style</string>
     <string name="config_replace_style_desc">Change the page to M3E style</string>
     <string name="amalor_version">%1$s (%2$d)</string>
-    <string name="myfc_root_not_authorized">ROOT not authorized</string>
+    <string name="root_not_authorized">ROOT not authorized</string>
     <string name="module_inactive">Not activated</string>
     <string name="module_inactive_summary">Enable the module in LSPosed to use Amalor</string>
     <string name="module_active">Activated</string>
     <string name="myfc_status">MYFC status</string>
     <string name="app_name">Amalor</string>
-    <string name="app_description">Some useless features for ColorOS 17</string>
+    <string name="app_description">Some delicious features for ColorOS 17 😋</string>
+    <!-- Navigation -->
     <string name="home">Home</string>
     <string name="config">Config</string>
     <string name="settings">Settings</string>
+    <!-- Home screen -->
     <string name="not_installed">Not installed</string>
     <string name="device_info">Device information</string>
     <string name="device">Device</string>
     <string name="android_version">Android version</string>
     <string name="privilege_unknown">Unknown</string>
     <string name="placeholder_page">Coming soon</string>
+    <!-- Settings -->
     <string name="settings_about">About</string>
     <string name="settings_about_amalor">About Amalor</string>
     <string name="settings_app_version">App version: %1$s</string>
@@ -32,7 +87,7 @@
     <string name="settings_personalization">Personalization</string>
     <string name="settings_theme_mode">Theme mode</string>
     <string name="settings_palette_style">Palette style</string>
-    <string name="settings_color_spec">Color scheme</string>
+    <string name="settings_color_spec">Color specification</string>
     
     
     <!-- Theme mode options -->
@@ -43,18 +98,24 @@
     
     <!-- Color spec options -->
     <string name="theme_settings_color_spec_only_2021">Current palette style only supports Spec 2021</string>
+    <string name="theme_settings_color_spec_only_2026">Current palette style only supports Spec 2026</string>
 
     <!-- Config -->
-    <string name="config_style">Application</string>
+    <string name="config_apps_group">Apps</string>
     <string name="config_system_ui">System UI</string>
-    <string name="config_system_ui_desc">com.android.systemui</string>
+    <string name="config_control_center">Control center</string>
+    <string name="config_disable_tile_icon_animation">Disable icon animations</string>
+    <string name="config_disable_tile_icon_animation_desc">Disable Lottie icon animations for tiles</string>
+    <string name="config_system_ui_package">com.android.systemui</string>
     <string name="config_status_bar">Status bar</string>
     <string name="config_mobile_network">Mobile network</string>
+    <string name="config_hide_non_data_sim">Hide non-data SIM</string>
+    <string name="config_hide_non_data_sim_desc">Hide the non-data SIM in separate signal style</string>
     <string name="config_mobile_network_type">Network type</string>
     <string name="config_mobile_network_type_desc">Display position, thickness, font</string>
     <string name="config_enable_modification">Enable modification</string>
-    <string name="config_network_icon_settings">Settings</string>
-    <string name="config_show_separately">Show separately</string>
+    <string name="config_network_type_options">Settings</string>
+    <string name="config_show_separately">Separate display</string>
     <string name="config_show_separately_desc">Move the signal type to the right of the signal</string>
     <string name="config_bold_style">Use bold style</string>
     <string name="config_bold_style_desc">Change the font weight to Bold</string>
@@ -62,7 +123,7 @@
     <string name="config_font_official">Official</string>
     <string name="config_font_system">Follow system</string>
     <string name="config_font_google_rounded">Google Rounded</string>
-    <string name="config_font_custom">Custom</string>
+    <string name="config_font_pixel">Pixel</string>
     <string name="config_save_failed">Could not save settings. Check the LSPosed service and try again.</string>
     <string name="restart_system_ui">Restart System UI?</string>
     <string name="cancel">Cancel</string>

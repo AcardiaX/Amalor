@@ -2,9 +2,10 @@ package me.acardia.amalor
 
 import android.os.Bundle
 import android.os.SystemClock
+import android.app.Activity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -43,7 +44,7 @@ data class AppThemeSettings(
     val colorSpec: ThemeColorSpec = ThemeColorSpec.SPEC_2025,
 )
 
-class MainActivity : AppCompatActivity(), XposedServiceStateListener {
+class MainActivity : ComponentActivity(), XposedServiceStateListener {
     private var xposedService by mutableStateOf<XposedService?>(null)
     private var themeReady = false
 
@@ -125,7 +126,7 @@ private fun AmalorTheme(
     // Set status bar appearance
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as AppCompatActivity).window
+            val window = (view.context as Activity).window
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

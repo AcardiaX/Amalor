@@ -10,11 +10,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Amalor.Starting">
-        <meta-data
-            android:name="androidx.appcompat.app.AppCompatDelegate.application_locales_config"
-            android:resource="@xml/locales_config" />
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
