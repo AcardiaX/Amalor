@@ -118,7 +118,7 @@ fun OpenSourceLicenseScreen(onBack: () -> Unit) {
                                     license.name,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable {
+                                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable {
                                         license.url?.let(uriHandler::openUri)
                                     },
                                 )

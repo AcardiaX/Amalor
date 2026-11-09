@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.rememberTopAppBarState
 import me.acardia.amalor.R
+import me.acardia.amalor.WeTypeOptions
 import me.acardia.amalor.ui.component.BaseWidget
 import me.acardia.amalor.ui.component.SegmentedColumn
 
@@ -28,6 +29,8 @@ fun ConfigScreen(
     modifier: Modifier = Modifier,
     outerPadding: PaddingValues = PaddingValues(0.dp),
     onOpenSystemUi: () -> Unit = {},
+    onOpenLauncher: () -> Unit = {},
+    onOpenWeType: () -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     Scaffold(
@@ -43,8 +46,10 @@ fun ConfigScreen(
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = padding + outerPadding, overscrollEffect = null) {
             item {
-                SegmentedColumn(title = stringResource(R.string.config_style)) {
-                    item { shape -> BaseWidget(title = stringResource(R.string.config_system_ui), shape = shape, description = stringResource(R.string.config_system_ui_desc), icon = painterResource(R.drawable.ic_systemui), onClick = onOpenSystemUi) }
+                SegmentedColumn(title = stringResource(R.string.config_apps_group)) {
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_system_ui), shape = shape, description = stringResource(R.string.config_system_ui_package), icon = painterResource(R.drawable.ic_systemui), onClick = onOpenSystemUi) }
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_launcher), shape = shape, description = "com.android.launcher", icon = painterResource(R.drawable.ic_home), onClick = onOpenLauncher) }
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_wetype), shape = shape, description = WeTypeOptions.PACKAGE_NAME, icon = painterResource(R.drawable.ic_keyboard), onClick = onOpenWeType) }
                 }
             }
         }

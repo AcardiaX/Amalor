@@ -23,6 +23,10 @@ android {
     namespace = "me.acardia.amalor"
     compileSdk = 37
 
+    androidResources {
+        localeFilters += listOf("en", "ru", "zh-rCN")
+    }
+
     defaultConfig {
         applicationId = "me.acardia.amalor"
         minSdk = 37
@@ -93,17 +97,18 @@ kotlin { jvmToolchain(25) }
 dependencies {
     implementation(platform("androidx.compose:compose-bom:2026.08.00"))
     implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
-    implementation("androidx.core:core-splashscreen:1.2.0")
+    implementation("androidx.core:core-splashscreen:1.2.0") {
+        exclude(group = "androidx.appcompat", module = "appcompat-resources")
+    }
     implementation("top.yukonga.miuix.kmp:miuix-nav-android:0.9.4-103b737b-SNAPSHOT")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha27")
+    implementation("androidx.compose.material3:material3:1.5.0-beta01")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.materialkolor:material-kolor:5.0.1")
-    implementation("com.mikepenz:aboutlibraries-core:15.2.0")
-    implementation("com.mikepenz:aboutlibraries-compose-m3:15.2.0")
+    implementation("com.materialkolor:material-kolor-material3:6.0.0")
+    implementation("com.mikepenz:aboutlibraries-core:15.3.0")
+    implementation("com.mikepenz:aboutlibraries-compose-m3:15.3.0")
     compileOnly("io.github.libxposed:api:102.0.0")
     implementation("io.github.libxposed:service:102.0.0")
     debugImplementation("androidx.compose.ui:ui-tooling")

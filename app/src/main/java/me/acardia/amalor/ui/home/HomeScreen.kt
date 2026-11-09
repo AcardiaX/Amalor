@@ -82,7 +82,7 @@ fun HomeScreen(
             item {
                 SegmentedColumn(
                     title = stringResource(R.string.device_info),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp),
                 ) {
                     item { shape ->
                         BaseWidget(
@@ -102,7 +102,7 @@ fun HomeScreen(
                         BaseWidget(
                             title = stringResource(R.string.myfc_status),
                             description = if (!isRootAuthorized) {
-                                stringResource(R.string.myfc_root_not_authorized)
+                                stringResource(R.string.root_not_authorized)
                             } else if (isModuleInstalled) {
                                 "${moduleVersion ?: stringResource(R.string.privilege_unknown)} (${activePrivilegeSource ?: stringResource(R.string.privilege_unknown)})"
                             } else "${stringResource(R.string.not_installed)} (${activePrivilegeSource ?: stringResource(R.string.privilege_unknown)})",
@@ -135,7 +135,7 @@ private fun ActivationStatusCard(
 
     ElevatedCard(
         onClick = {},
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = containerColor,
             contentColor = contentColor,
@@ -152,7 +152,7 @@ private fun ActivationStatusCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                     Icon(
@@ -164,7 +164,7 @@ private fun ActivationStatusCard(
                         modifier = Modifier.size(24.dp),
                     )
 
-                Column(modifier = Modifier.padding(start = 20.dp)) {
+                Column(modifier = Modifier.padding(start = 12.dp)) {
                     Text(
                         text = stringResource(titleRes),
                         style = MaterialTheme.typography.titleMediumEmphasized,

@@ -1,19 +1,86 @@
 <resources>
+    <!-- WeType keyboard -->
+    <string name="config_wetype">微信输入法</string>
+    <string name="config_font_group">字体</string>
+    <string name="wetype_follow_system_font_desc">键盘字体跟随系统字体</string>
+    <string name="restart_wetype">重启 微信输入法？</string>
+    <!-- Launcher app icons -->
+    <string name="launcher_icons_group">图标</string>
+    <string name="launcher_app_icons">应用图标</string>
+    <string name="launcher_widgets_menu_title">显示小组件入口</string>
+    <string name="launcher_widgets_menu_desc">为长按菜单显示原生小组件入口</string>
+    <string name="launcher_notification_badge_colors_title">通知角标取色</string>
+    <string name="launcher_notification_badge_colors_desc">通知圆点和数字角标跟随应用图标取色</string>
+    <!-- Status bar layout -->
+    <string name="statusbar_layout_group">布局</string>
+    <string name="statusbar_margins_title">状态栏边距</string>
+    <string name="statusbar_margins_desc">自定义状态栏边距</string>
+    <string name="statusbar_margin_left">左边距</string>
+    <string name="statusbar_margin_right">右边距</string>
+    <string name="statusbar_margin_value">%1$d dp</string>
+    <string name="statusbar_margin_reset">重置边距</string>
+
+
+    <!-- System launcher -->
+    <string name="launcher_pages">页面布局</string>
+    <string name="restart_launcher">重启 系统桌面？</string>
+    <string name="config_launcher">系统桌面</string>
+    <string name="launcher_main_screen">主屏</string>
+    <string name="launcher_custom_home_screen_title">自定义主屏</string>
+    <string name="launcher_custom_home_screen_desc">自定义系统桌面的主屏</string>
+    <string name="launcher_reset_home_screen">将主屏重置为默认值</string>
+    <string name="expand_settings">展开</string>
+    <string name="collapse_settings">收起</string>
+
+
+    <!-- Settings -->
+    <string name="settings_log_level">日志等级</string>
+    <string name="log_level_info">信息</string>
+    <string name="log_level_debug">调试</string>
+    <string name="log_level_off">关闭</string>
+
+
+    <!-- System UI: native features -->
+    <string name="config_native_features">原生特性</string>
+    <string name="config_native_power">原生关机菜单</string>
+    <string name="config_native_power_desc">使用原生关机菜单样式</string>
+    <string name="config_back_gesture">返回手势</string>
+    <string name="config_back_gesture_desc">样式、预测性返回</string>
+    <string name="config_native_style">原生样式</string>
+    <string name="config_native_predictive_back">原生预测性返回动画</string>
+    <string name="config_native_predictive_back_desc">使用原生预测性返回动画</string>
+    <string name="restart_scopes">重启 以下作用域？</string>
+    <string name="config_native_volume">原生音量面板</string>
+    <string name="config_native_volume_desc">使用原生音量面板</string>
+    <string name="config_native_clipboard">原生剪贴板</string>
+    <string name="config_native_clipboard_desc">强制启用原生剪贴板</string>
+
+
+    <!-- Status bar: battery and tile icons -->
     <string name="config_battery_icon">电池图标</string>
-    <string name="config_battery_body_fill">规范电量显示</string>
-    <string name="config_battery_body_fill_desc">保持电量进度在电池内部</string>
+    <string name="config_tile_icons">磁贴图标</string>
+    <string name="config_auto_brightness_icon_clip_bypass">优化自动亮度图标</string>
+    <string name="config_auto_brightness_icon_clip_bypass_desc">阻止裁剪自动亮度图标</string>
+    <string name="config_battery_level_display">规范电量显示</string>
+    <string name="config_battery_level_display_desc">保持电量进度在电池内部</string>
+
+
+    <!-- System UI: other -->
     <string name="config_other">其他</string>
     <string name="config_software_update">软件更新</string>
     <string name="config_replace_style">更换样式</string>
     <string name="config_replace_style_desc">将页面更换为 M3E 风格</string>
+
+
+    <!-- App and module status -->
     <string name="amalor_version">%1$s (%2$d)</string>
-    <string name="myfc_root_not_authorized">未授权 ROOT</string>
+    <string name="root_not_authorized">未授权 ROOT</string>
     <string name="module_inactive">未激活</string>
     <string name="module_inactive_summary">请在 LSPosed 中启用模块后使用</string>
     <string name="module_active">已激活</string>
     <string name="myfc_status">MYFC 状态</string>
     <string name="app_name">Amalor</string>
-    <string name="app_description">为 ColorOS 17 提供一些无用功能</string>
+    <string name="app_description">为 ColorOS 17 提供一些美味的功能 😋</string>
     
     <!-- Navigation -->
     <string name="home">主页</string>
@@ -59,18 +126,24 @@
     
     <!-- Color spec options -->
     <string name="theme_settings_color_spec_only_2021">当前调色板样式仅支持 Spec 2021</string>
+    <string name="theme_settings_color_spec_only_2026">当前调色板样式仅支持 Spec 2026</string>
 
     <!-- Config -->
-    <string name="config_style">应用</string>
+    <string name="config_apps_group">应用</string>
     <string name="config_system_ui">系统界面</string>
-    <string name="config_system_ui_desc">com.android.systemui</string>
+    <string name="config_control_center">控制中心</string>
+    <string name="config_disable_tile_icon_animation">禁用图标动画</string>
+    <string name="config_disable_tile_icon_animation_desc">禁用磁贴图标的 Lottie 动画</string>
+    <string name="config_system_ui_package">com.android.systemui</string>
     <string name="config_status_bar">状态栏</string>
     <string name="config_mobile_network">移动网络</string>
+    <string name="config_hide_non_data_sim">隐藏非上网卡</string>
+    <string name="config_hide_non_data_sim_desc">隐藏独立样式下的非上网卡</string>
     <string name="config_mobile_network_type">网络类型</string>
     <string name="config_mobile_network_type_desc">显示位置、粗细、字体</string>
     <string name="config_enable_modification">启用修改</string>
-    <string name="config_network_icon_settings">设置</string>
-    <string name="config_show_separately">单独显示</string>
+    <string name="config_network_type_options">配置</string>
+    <string name="config_show_separately">独立显示</string>
     <string name="config_show_separately_desc">将信号类型移至信号右侧</string>
     <string name="config_bold_style">使用粗体样式</string>
     <string name="config_bold_style_desc">将字体字重改为 Bold</string>
@@ -78,9 +151,9 @@
     <string name="config_font_official">官方</string>
     <string name="config_font_system">跟随系统</string>
     <string name="config_font_google_rounded">谷歌圆</string>
-    <string name="config_font_custom">自定义</string>
+    <string name="config_font_pixel">Pixel</string>
     <string name="config_save_failed">设置保存失败，请检查 LSPosed 服务后重试。</string>
-    <string name="restart_system_ui">重启系统界面？</string>
+    <string name="restart_system_ui">重启 系统界面？</string>
     <string name="cancel">取消</string>
     <string name="confirm">确定</string>
     <string name="config_system_ui_blur">模糊</string>

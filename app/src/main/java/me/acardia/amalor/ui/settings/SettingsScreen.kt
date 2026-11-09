@@ -3,6 +3,8 @@
 package me.acardia.amalor.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -60,6 +62,8 @@ fun SettingsScreen(
     settings: AppThemeSettings,
     onSettingsChange: (AppThemeSettings) -> Unit,
     onOpenAbout: () -> Unit,
+    logLevel: Int,
+    onLogLevelChange: (Int) -> Unit,
 ) {
     val topAppBarState = androidx.compose.material3.rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
@@ -147,27 +151,43 @@ fun SettingsScreen(
                         )
                     }
                     item { shape ->
-                        val specs = if (settings.paletteStyle.supportsSpec2025) {
-                            ThemeColorSpec.entries
-                        } else {
-                            listOf(ThemeColorSpec.SPEC_2021)
-                        }
+                        val specs = settings.paletteStyle.supportedSpecs
                         SettingMenuItem(
                             title = stringResource(R.string.settings_color_spec),
-                            description = settings.colorSpec.displayName,
+                            description = settings.paletteStyle.effectiveSpec(settings.colorSpec).displayName,
                             icon = Icons.Rounded.Palette,
                             iconRes = R.drawable.ic_color_spec,
                             values = specs.map { it.displayName },
-                            selected = specs.indexOf(settings.colorSpec).coerceAtLeast(0),
+                            selected = specs.indexOf(settings.paletteStyle.effectiveSpec(settings.colorSpec)).coerceAtLeast(0),
                             shape = shape,
-                            enabled = settings.paletteStyle.supportsSpec2025,
-                            disabledDescription = if (settings.paletteStyle.supportsSpec2025) null else stringResource(R.string.theme_settings_color_spec_only_2021),
+                            enabled = specs.size > 1,
+                            disabledDescription = when {
+                                specs.size > 1 -> null
+                                settings.paletteStyle == PaletteStyle.Cmf -> stringResource(R.string.theme_settings_color_spec_only_2026)
+                                else -> stringResource(R.string.theme_settings_color_spec_only_2021)
+                            },
                         ) { onSettingsChange(settings.copy(colorSpec = specs[it])) }
                     }
                 }
             }
             item {
-                SegmentedColumn(title = stringResource(R.string.settings_about)) {
+                SegmentedColumn(title = stringResource(R.string.config_other)) {
+                    item { shape ->
+                        val levels = listOf(
+                            stringResource(R.string.log_level_info),
+                            stringResource(R.string.log_level_debug),
+                            stringResource(R.string.log_level_off),
+                        )
+                        SettingMenuItem(
+                            title = stringResource(R.string.settings_log_level),
+                            description = levels[logLevel.coerceIn(0, 2)],
+                            iconRes = R.drawable.ic_log_level,
+                            values = levels,
+                            selected = logLevel,
+                            shape = shape,
+                            onSelected = onLogLevelChange,
+                        )
+                    }
                     item { shape ->
                         SettingItem(
                             title = stringResource(R.string.settings_about_amalor),
@@ -217,8 +237,8 @@ private fun SettingItem(
 private fun SettingMenuItem(
     title: String,
     description: String,
-    icon: ImageVector,
-    iconRes: Int,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     values: List<String>,
     selected: Int,
     shape: androidx.compose.ui.graphics.Shape,
@@ -230,7 +250,7 @@ private fun SettingMenuItem(
     BaseWidget(
         title = title,
         description = disabledDescription ?: description,
-        icon = painterResource(iconRes),
+        icon = iconRes?.let { painterResource(it) },
         iconVector = icon,
         shape = shape,
         enabled = enabled,
@@ -263,7 +283,7 @@ private fun SelectionDialog(
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 values.forEachIndexed { index, value ->
                     Row(
-                        Modifier.fillMaxWidth().clickable { onSelect(index) }.padding(vertical = 8.dp),
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { onSelect(index) }.padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(index == selected, { onSelect(index) })
