@@ -14,6 +14,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import me.acardia.amalor.NetworkTypeOptions;
+import me.acardia.amalor.xposed.HookLog;
 
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
@@ -31,6 +32,7 @@ public final class NetworkTypeHook {
 
     private boolean strategyInstalled;
     private boolean fontInstalled;
+    private boolean artworkInstalled;
     private boolean optionsLoaded;
     private boolean active;
     private boolean useBold;
@@ -54,7 +56,7 @@ public final class NetworkTypeHook {
                         && preferences.getBoolean(NetworkTypeOptions.BOLD, false);
                 optionsLoaded = true; // Settings are applied on the next SystemUI restart.
             } catch (Throwable error) {
-                module.log(Log.ERROR, TAG, "could not read network type settings; keeping system defaults", error);
+                HookLog.write(module, Log.ERROR, TAG, "could not read network type settings; keeping system defaults", error);
                 return;
             }
         }
@@ -64,18 +66,26 @@ public final class NetworkTypeHook {
             try {
                 installStackedStrategy(loader);
                 strategyInstalled = true;
-                module.log(Log.INFO, TAG, "installed merged dual-SIM BigType strategy");
+                HookLog.write(module, Log.INFO, TAG, "installed merged dual-SIM BigType strategy");
             } catch (Throwable error) {
-                module.log(Log.ERROR, TAG, "merged dual-SIM strategy hook failed", error);
+                HookLog.write(module, Log.ERROR, TAG, "merged dual-SIM strategy hook failed", error);
             }
         }
-        if (!fontInstalled && fontStyle != NetworkTypeOptions.OFFICIAL) {
+        if (!artworkInstalled) {
+            try {
+                PixelNetworkArtworkHook.install(module, loader);
+                artworkInstalled = true;
+            } catch (Throwable error) {
+                HookLog.write(module, Log.ERROR, TAG, "Pixel network artwork hook failed", error);
+            }
+        }
+        if (!fontInstalled && (fontStyle == NetworkTypeOptions.SYSTEM || fontStyle == NetworkTypeOptions.GOOGLE_ROUNDED)) {
             try {
                 installStackedNetworkFont(loader);
                 fontInstalled = true;
-                module.log(Log.INFO, TAG, "installed merged dual-SIM network font");
+                HookLog.write(module, Log.INFO, TAG, "installed merged dual-SIM network font");
             } catch (Throwable error) {
-                module.log(Log.ERROR, TAG, "merged dual-SIM font hook failed", error);
+                HookLog.write(module, Log.ERROR, TAG, "merged dual-SIM font hook failed", error);
             }
         }
     }
@@ -163,7 +173,7 @@ public final class NetworkTypeHook {
         for (Method method : loader.loadClass(COMPOSABLE + className).getDeclaredMethods()) {
             if (method.getName().equals(methodName)) {
                 if (!module.deoptimize(method)) {
-                    module.log(Log.WARN, TAG, "could not deoptimize " + className + "." + methodName);
+                    HookLog.write(module, Log.WARN, TAG, "could not deoptimize " + className + "." + methodName);
                 }
                 found = true;
             }
