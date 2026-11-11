@@ -2,9 +2,18 @@ package me.acardia.amalor.xposed.systemui;
 
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.Bitmap;
+import android.graphics.Paint;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ReplacementSpan;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.util.Log;
 import android.util.LruCache;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Locale;
@@ -17,6 +26,7 @@ import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
 import me.acardia.amalor.NetworkTypeOptions;
 import me.acardia.amalor.R;
+import me.acardia.amalor.xposed.HookLog;
 
 /** Uses the ONextBox native-style network artwork for the existing ColorOS label slot. */
 final class PixelNetworkArtworkHook {
@@ -35,6 +45,8 @@ final class PixelNetworkArtworkHook {
         }
     };
     private static final AtomicInteger selectedFont = new AtomicInteger(NetworkTypeOptions.OFFICIAL);
+    private static boolean viewArtworkReported;
+    private static boolean viewFailureReported;
     private static final android.content.SharedPreferences.OnSharedPreferenceChangeListener fontListener = (prefs, key) -> {
         if (key == null || NetworkTypeOptions.FONT.equals(key)) {
             selectedFont.set(prefs.getInt(NetworkTypeOptions.FONT, NetworkTypeOptions.OFFICIAL));
@@ -78,6 +90,99 @@ final class PixelNetworkArtworkHook {
         hookCompose(module, loader);
     }
 
+    static void installView(XposedModule module, ClassLoader loader) throws Exception {
+        Class<?> binding = loader.loadClass(NetworkTypeHook.VIEW_BINDING);
+        Field text = binding.getDeclaredField("mobileTypeText");
+        Field image = binding.getDeclaredField("mobileTypeImage");
+        text.setAccessible(true);
+        image.setAccessible(true);
+        Method bind = binding.getDeclaredMethod("bindNetworkTypeText",
+                loader.loadClass("com.android.systemui.statusbar.pipeline.mobile.domain.model.OplusNetworkTypeTextModel"));
+        NetworkTypeHook.deoptimizeViewBinding(module, loader);
+        module.hook(bind).setId("amalor-network-pixel-artwork-view")
+                .setExceptionMode(XposedInterface.ExceptionMode.PROTECTIVE)
+                .intercept(chain -> {
+                    Object result = chain.proceed();
+                    if (selectedFont.get() != NetworkTypeOptions.PIXEL) return result;
+                    try {
+                        String label = modelLabel(chain.getArg(0));
+                        Integer id = iconId(label);
+                        if (id == null) return result;
+                        TextView view = (TextView) text.get(chain.getThisObject());
+                        Drawable drawable = artworkContext(module, view.getContext()).getDrawable(id);
+                        if (drawable == null) return result;
+                        if (label.startsWith("TIGO_")) {
+                            ImageView target = (ImageView) image.get(chain.getThisObject());
+                            if (target == null) return result;
+                            target.setImageDrawable(drawable.mutate());
+                        } else {
+                            // Native prefix/suffix metric spans would split the same artwork into
+                            // multiple text runs (notably 5G-A). Keep the text, replace its styling.
+                            SpannableString value = new SpannableString(view.getText().toString());
+                            if (value.length() == 0) return result;
+                            // Match Compose's visible-glyph centering, not the vector's unequal
+                            // transparent top/bottom margins. Keep the bitmap at its original dp size.
+                            Bitmap centered = rasterizeCentered(drawable);
+                            centered.setDensity(view.getResources().getDisplayMetrics().densityDpi);
+                            Drawable icon = new BitmapDrawable(view.getResources(), centered);
+                            value.setSpan(new ArtworkSpan(icon, NetworkTypeHook.independentLabelPadding(view)), 0, value.length(),
+                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                            view.setText(value);
+                        }
+                        if (!viewArtworkReported) {
+                            viewArtworkReported = true;
+                            HookLog.write(module, Log.INFO, "Amalor", "independent Pixel network artwork applied");
+                        }
+                    } catch (Throwable error) {
+                        if (!viewFailureReported) {
+                            viewFailureReported = true;
+                            HookLog.write(module, Log.ERROR, "Amalor", "independent network artwork unavailable", error);
+                        }
+                    }
+                    return result;
+                });
+    }
+
+    private static final class ArtworkSpan extends ReplacementSpan {
+        private final Drawable icon;
+        private final int sidePadding;
+
+        ArtworkSpan(Drawable icon, int sidePadding) {
+            this.icon = icon;
+            this.sidePadding = sidePadding;
+        }
+
+        @Override public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt metrics) {
+            if (metrics != null) paint.getFontMetricsInt(metrics);
+            // Reserve spacing once in the span, without accumulating padding on SIM rebinds.
+            return icon.getIntrinsicWidth() + sidePadding * 2;
+        }
+
+        @Override public void draw(Canvas canvas, CharSequence text, int start, int end, float x,
+                                   int top, int y, int bottom, Paint paint) {
+            icon.setTint(paint.getColor());
+            icon.setBounds(0, 0, icon.getIntrinsicWidth(), icon.getIntrinsicHeight());
+            int save = canvas.save();
+            try {
+                canvas.translate(x + sidePadding, (top + bottom - icon.getIntrinsicHeight()) / 2f);
+                icon.draw(canvas);
+            } finally { canvas.restoreToCount(save); }
+        }
+    }
+
+    private static Integer iconId(String label) {
+        return label == null ? null : ICONS.get(label.toUpperCase(Locale.ROOT).replace(" ", ""));
+    }
+
+    private static android.content.Context artworkContext(XposedModule module, android.content.Context context)
+            throws android.content.pm.PackageManager.NameNotFoundException {
+        if (artworkContext == null) {
+            artworkContext = context.createPackageContext(module.getModuleApplicationInfo().packageName,
+                    android.content.Context.CONTEXT_IGNORE_SECURITY);
+        }
+        return artworkContext;
+    }
+
     private static void hookCompose(XposedModule module, ClassLoader loader) throws Exception {
         String ownerName = "com.android.systemui.statusbar.pipeline.shared.ui.composable.OplusStackedMobileIconLayoutStrategyKt";
         Class<?> owner = loader.loadClass(ownerName);
@@ -114,13 +219,12 @@ final class PixelNetworkArtworkHook {
                     Object[] args = chain.getArgs().toArray(new Object[0]);
                     Object model = args[1];
                     String label = modelLabel(model);
-                    Integer id = label == null ? null : ICONS.get(label.toUpperCase(Locale.ROOT).replace(" ", ""));
+                    Integer id = iconId(label);
                     if (id == null) return chain.proceed();
                     if (artworkContext == null) {
                         android.content.Context systemContext = (android.content.Context) Class.forName("android.app.ActivityThread")
                                 .getMethod("currentApplication").invoke(null);
-                        artworkContext = systemContext.createPackageContext(
-                                module.getModuleApplicationInfo().packageName, android.content.Context.CONTEXT_IGNORE_SECURITY);
+                        artworkContext(module, systemContext);
                     }
                     // The vector is monochrome; Compose applies the live tint separately. Reuse
                     // rasterization/ImageBitmap identity instead of scanning pixels on recomposition.
