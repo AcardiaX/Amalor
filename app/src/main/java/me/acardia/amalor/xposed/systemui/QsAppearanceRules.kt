@@ -30,6 +30,15 @@ internal object QsAppearanceRules {
     fun backgroundAlpha(roleColor: Int, drawableAlpha: Int): Int =
         (roleColor ushr 24) * drawableAlpha.coerceIn(0, 255) / 255
 
+    /** Only device-space chrome is recolored; device artwork and battery graphics are content. */
+    fun secondaryDeviceSpaceForeground(resourceName: String): Boolean? = when (resourceName) {
+        "no_entrance_title", "rectangle_entrance_title", "rectangle_panel_title",
+        "no_device_space_icon", "rectangle_entrance_icon", "square_entrance_icon" -> false
+        "no_entrance_title_dec", "rectangle_entrance_title_dec", "rectangle_main_status",
+        "rectangle_status_image" -> true
+        else -> null
+    }
+
     fun mediaDetailFraction(start: Float, expanding: Boolean, progress: Float): Float {
         val from = start.coerceIn(0f, 1f)
         if (!progress.isFinite()) return from
@@ -46,6 +55,8 @@ internal object QsAppearanceRules {
         "clock", "clock_for_fake", "qs_footer_clock", "oplus_qs_clock",
         "date", "oplus_date", "oplus_qs_date",
     )
+
+    fun clockDateColoring(materialEnabled: Boolean, requested: Boolean): Boolean = materialEnabled && requested
 
     fun inlineThemeFlags(dark: Boolean): Map<String, Boolean> = mapOf(
         "key_is_dark_theme_color" to dark,
@@ -70,4 +81,18 @@ internal object QsAppearanceRules {
     fun unavailableTile(state: Int?, unavailableFlag: Boolean, disabledByPolicy: Boolean): Boolean =
         disabledByPolicy || (state?.let { it == 0 || it == 101 } ?: unavailableFlag)
 
+}
+
+/** Keep the full native ColorStateList, including updates received while a role is applied. */
+internal class QsHeaderTextColorState<T : Any>(initial: T) {
+    var nativeColor: T = initial
+        private set
+    private var applied: T? = null
+
+    fun observe(current: T) {
+        if (current !== applied) nativeColor = current
+    }
+
+    fun recordNative(color: T) { nativeColor = color }
+    fun markApplied(color: T?) { applied = color }
 }

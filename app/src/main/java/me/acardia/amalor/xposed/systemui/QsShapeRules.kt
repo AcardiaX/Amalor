@@ -17,4 +17,12 @@ internal object QsShapeRules {
         // Spatial springs may overshoot; the resulting outline must still fit its bounds.
         return (limit + (active - limit) * fraction).coerceIn(0f, limit)
     }
+
+    /** Animated cover radii are already converted to local coordinates: null must not cap them. */
+    fun outlineRadius(requested: Float, width: Int, height: Int, maximum: Float?): Float {
+        if (!requested.isFinite() || width <= 0 || height <= 0) return 0f
+        val bounds = minOf(width, height) / 2f
+        val cap = maximum?.takeIf { it.isFinite() }?.coerceAtLeast(0f) ?: bounds
+        return minOf(requested.coerceAtLeast(0f), cap, bounds)
+    }
 }

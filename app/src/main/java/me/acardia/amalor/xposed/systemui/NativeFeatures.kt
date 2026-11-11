@@ -13,7 +13,7 @@ import java.lang.reflect.Field
 
 /** Process-scoped adapters for the ONextBox native feature ports. */
 internal class NativeFeatures(val module: XposedModule, val loader: ClassLoader) {
-    private val preferences: SharedPreferences = module.getRemotePreferences(NetworkTypeOptions.GROUP)
+    val preferences: SharedPreferences = module.getRemotePreferences(NetworkTypeOptions.GROUP)
     private val flags = CachedBooleanPreferences(preferences)
     // These hooks own drawables, observers and window effects. UI selection is persisted live,
     // but one process uses one material mode; install/render decisions share this startup value.

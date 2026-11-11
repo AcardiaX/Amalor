@@ -8,7 +8,8 @@ public final class NativeFeatureOptions {
     public static final String CLIPBOARD = "native_clipboard";
     public static final String QS_TILE_NATIVE_APPEARANCE = "qs_tile_native_appearance";
     public static final String HIDE_NON_DATA_SIM = "status_bar_hide_non_data_sim";
-    public static final String[] KEYS = {POWER_MENU, BACK_PANEL, BACK_PREDICTIVE_ANIMATION, VOLUME_PANEL, CLIPBOARD, QS_TILE_NATIVE_APPEARANCE, HIDE_NON_DATA_SIM};
+    public static final String NOTIFICATION_CLOCK_DATE_COLORS = "notification_clock_date_colors";
+    public static final String[] KEYS = {POWER_MENU, BACK_PANEL, BACK_PREDICTIVE_ANIMATION, VOLUME_PANEL, CLIPBOARD, QS_TILE_NATIVE_APPEARANCE, HIDE_NON_DATA_SIM, NOTIFICATION_CLOCK_DATE_COLORS};
 
     private NativeFeatureOptions() {}
 }

@@ -1,7 +1,9 @@
 package me.acardia.amalor.xposed.systemui
 
 import android.annotation.SuppressLint
+import android.animation.ValueAnimator
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.BlendMode
@@ -18,6 +20,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.DrawableWrapper
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ShapeDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -29,6 +32,7 @@ import android.widget.TextSwitcher
 import android.widget.TextView
 import android.widget.SeekBar
 import androidx.core.graphics.ColorUtils
+import androidx.annotation.Keep
 import androidx.core.view.OneShotPreDrawListener
 import me.acardia.amalor.NativeFeatureOptions
 import java.lang.ref.WeakReference
@@ -53,6 +57,16 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
     private val controlBackgrounds = WeakHashMap<View, SurfaceKind>()
     private val notificationButtons = WeakHashMap<View, Unit>()
     private val controlPalettes = WeakHashMap<View, Colors>()
+    private val headerTexts = WeakHashMap<TextView, HeaderTextBinding>()
+    private val writingHeaderColor = ThreadLocal<Boolean?>()
+    @field:Keep
+    private val headerPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, changed ->
+        if (changed == null || changed == NativeFeatureOptions.NOTIFICATION_CLOCK_DATE_COLORS) main.post {
+            synchronized(headerTexts) { headerTexts.keys.toList() }.forEach { text ->
+                runCatching { tintHeaderText(text) }.onFailure { fallback("clock/date preference", it) }
+            }
+        }
+    }
     private var detailControlTint: ((View) -> Unit)? = null
     private var sliderDetailRefresh: (() -> Unit)? = null
     private var shapes: QsShapeMotion? = null
@@ -114,6 +128,10 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
     private class ContentWatch(val repaint: (View) -> Unit) {
         var pending: OneShotPreDrawListener? = null
     }
+    private class HeaderTextBinding(context: Context, colors: ColorStateList) {
+        var context = WeakReference(context)
+        val colors = QsHeaderTextColorState(colors)
+    }
     fun install() {
         val flag = r.type("com.oplus.systemui.qs.base.res.model.TileViewFlag")
         val attr = flag.getDeclaredMethod("getAttr")
@@ -127,6 +145,7 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
             "click-only connected feedback" to { clickMotion.install() },
             "icons" to ::installIcons,
             "backgrounds" to ::installBackgrounds,
+            "device space" to ::installDeviceSpace,
             "detail backgrounds" to ::installDetailBackgrounds,
             "detail content lifecycle" to ::installDetailContentLifecycle,
             "remote detail theme" to {
@@ -238,6 +257,7 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         var owner: Class<*>? = view.javaClass
         while (owner != null) {
             if (owner.name.startsWith("com.oplus.systemui.plugins.qs.customize.view.tile.") ||
+                owner.name.startsWith("com.oplus.deviceplugin.sdk.ui.view.separatecardview.") ||
                 owner.name == "com.oplus.systemui.qs.base.tile.OplusQSTileBaseView" ||
                 owner.name == "com.oplus.systemui.qs.base.tile.OplusQSHighlightTileView" ||
                 owner.name == "com.oplus.systemui.qs.slider.detail.widget.QsDetailTileBaseView") return true
@@ -526,6 +546,9 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         val draw = TextView::class.java.getDeclaredMethod("onDraw", Canvas::class.java)
         r.hook("qs-appearance:detail-text-draw", draw) { chain ->
             val view = chain.thisObject as TextView
+            if (synchronized(headerTexts) { headerTexts.containsKey(view) }) runCatching {
+                tintHeaderText(view)
+            }.onFailure { fallback("clock/date draw", it) }
             if (r.enabled(key) && synchronized(detailTexts) { detailTexts.containsKey(view) } && isDetailSurface(view)) runCatching {
                 detailTextRole(view)?.let { secondary ->
                     val color = detailTextColor(view, secondary)
@@ -539,6 +562,23 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
             val setter = TextView::class.java.getDeclaredMethod("setTextColor", argument)
             r.hook("qs-appearance:detail-text:$argument", setter) { chain ->
                 val view = chain.thisObject as TextView
+                val header = if (writingHeaderColor.get() != true) synchronized(headerTexts) { headerTexts[view] } else null
+                if (header != null) {
+                    val native = if (argument == ColorStateList::class.java) chain.getArg(0) as? ColorStateList
+                        else ColorStateList.valueOf(chain.getArg(0) as Int)
+                    if (native != null) {
+                        header.colors.recordNative(native)
+                        val active = clockDateColoring()
+                        return@hook writeHeaderColor {
+                            val result = if (active) {
+                                val color = colors(header.context.get() ?: view.context).active
+                                chain.proceed(arrayOf(if (argument == ColorStateList::class.java) ColorStateList.valueOf(color) else color))
+                            } else chain.proceed()
+                            header.colors.markApplied(if (active) view.textColors else null)
+                            result
+                        }
+                    }
+                }
                 val secondary = if (r.enabled(key) && synchronized(detailTexts) { detailTexts.containsKey(view) } &&
                     isDetailSurface(view)) detailTextRole(view) else null
                 if (secondary == null) chain.proceed() else {
@@ -1097,6 +1137,146 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         synchronized(notificationButtons) { notificationButtons.containsKey(view) } ||
             QsAppearanceRules.roundNotificationControl(view.javaClass.name)
 
+    private fun clockDateColoring(): Boolean = QsAppearanceRules.clockDateColoring(
+        r.enabled(key), r.enabled(NativeFeatureOptions.NOTIFICATION_CLOCK_DATE_COLORS))
+
+    private fun <T> writeHeaderColor(action: () -> T): T {
+        val previous = writingHeaderColor.get()
+        writingHeaderColor.set(true)
+        return try { action() } finally {
+            if (previous == null) writingHeaderColor.remove() else writingHeaderColor.set(previous)
+        }
+    }
+
+    private fun installDeviceSpace() {
+        val prefix = "com.oplus.deviceplugin.sdk.ui.view.separatecardview."
+        val base = r.type("${prefix}d") // 17.99.02 AbstractNewSeparateCardView.
+        val fillField = r.field(base, "g")
+        val animator = r.field(base, "k")
+        check(fillField.type == ShapeDrawable::class.java && animator.type == ValueAnimator::class.java)
+        val hosts = WeakHashMap<View, WeakReference<View>>()
+        val cardScope = ThreadLocal<Boolean?>()
+        var reported = false
+
+        fun tintContent(root: View) {
+            val palette = colors(root.context)
+            fun visit(view: View) {
+                val name = runCatching { view.resources.getResourceEntryName(view.id) }.getOrDefault("")
+                QsAppearanceRules.secondaryDeviceSpaceForeground(name)?.let { secondary ->
+                    val color = when {
+                        !root.isEnabled || !view.isEnabled -> palette.disabledIcon
+                        secondary -> palette.onSecondary
+                        else -> palette.onInactive
+                    }
+                    if (view is TextView && view.currentTextColor != color) view.setTextColor(color)
+                    if (view is ImageView) {
+                        tintImage(view, color)
+                        // These entrance glyphs are drawn as ImageView backgrounds, not src images.
+                        val background = view.background
+                        if (background != null) {
+                            val filtered = background.colorFilter != null
+                            if (filtered) background.mutate().clearColorFilter()
+                            if (filtered || view.backgroundTintList?.defaultColor != color) {
+                                view.backgroundTintBlendMode = BlendMode.SRC_IN
+                                view.backgroundTintList = ColorStateList.valueOf(color)
+                            }
+                        }
+                    }
+                }
+                if (view is ViewGroup) for (index in 0 until view.childCount) visit(view.getChildAt(index))
+            }
+            visit(root)
+        }
+
+        fun repaint(root: View) {
+            synchronized(hosts) { hosts[root]?.get() }?.let { host ->
+                // Keep the SDK's ShapeDrawable and native outline/size, but stop its OEM-color
+                // animator from repainting over SE1 on the next frame.
+                (animator.get(root) as? ValueAnimator)?.cancel()
+                val fill = fillField.get(root) as ShapeDrawable
+                val palette = colors(root.context)
+                val color = if (root.isEnabled) palette.inactive else palette.disabled
+                if (fill.paint.color != color) {
+                    fill.paint.color = color
+                    fill.invalidateSelf()
+                }
+                if (host.backgroundTintList != null) host.backgroundTintList = null
+                if (host.background !== fill) host.background = fill
+                host.isForceDarkAllowed = false
+                if (!reported) {
+                    reported = true
+                    r.info("QS device-space material applied: ${root.javaClass.name}")
+                }
+            }
+            tintContent(root)
+        }
+
+        val platform = r.type("com.oplus.deviceplugin.sdk.utils.PlatformUtils")
+        for (name in listOf("isBlurEnable", "isLightBlurEnable", "isGlobalThemeApplied")) {
+            val params = if (name == "isGlobalThemeApplied") arrayOf(android.content.res.Resources::class.java)
+                else arrayOf(Context::class.java, android.content.res.Resources::class.java)
+            val method = platform.getDeclaredMethod(name, *params)
+            check(method.returnType == Boolean::class.javaPrimitiveType)
+            r.hook("qs-appearance:device-space-policy:$name", method) { chain ->
+                // Only the card refresh uses the SDK's plain-color branch. Other plugin surfaces
+                // still query their native policies outside this scope.
+                if (r.enabled(key) && cardScope.get() == true) false else chain.proceed()
+            }
+        }
+        val setBackground = base.getDeclaredMethod("a", Int::class.javaPrimitiveType, View::class.java)
+        r.hook("qs-appearance:device-space-background", setBackground) { chain ->
+            chain.proceed().also {
+                if (r.enabled(key)) runCatching {
+                    val root = chain.thisObject as View
+                    synchronized(hosts) { hosts[root] = WeakReference(chain.getArg(1) as View) }
+                    repaint(root)
+                    watchDetailContent(root, detail = false, repaintControls = ::repaint)
+                }.onFailure { fallback("device-space background", it) }
+            }
+        }
+        r.module.deoptimize(setBackground)
+        val cards = listOf("NoDeviceEntranceCardView", "RectangleEntranceCardView", "SquareEntranceCardView",
+            "RectangleDeviceCardView", "SquareDeviceCardView").map { r.type(prefix + it) }
+        // h() also refreshes the corner provider outside g(), e.g. during configuration changes.
+        val refreshes = cards.map { it.getDeclaredMethod("g") } + base.getDeclaredMethod("h")
+        for (method in refreshes) {
+            r.hook("qs-appearance:device-space-refresh:$method", method) { chain ->
+                if (!r.enabled(key)) return@hook chain.proceed()
+                val previous = cardScope.get()
+                cardScope.set(true)
+                val result = try { chain.proceed() } finally {
+                    if (previous == null) cardScope.remove() else cardScope.set(previous)
+                }
+                if (method.name == "g") runCatching { repaint(chain.thisObject as View) }
+                    .onFailure { fallback("device-space content", it) }
+                result
+            }
+            r.module.deoptimize(method)
+        }
+        for (type in cards) for (method in type.declaredMethods) {
+            if (method.returnType != Void.TYPE || !(method.name in setOf("i", "j") && method.parameterCount == 0 ||
+                    method.name == "setTextColor" && method.parameterTypes.contentEquals(arrayOf(Int::class.javaPrimitiveType)))) continue
+            r.hook("qs-appearance:device-space-foreground:$method", method) { chain ->
+                chain.proceed().also {
+                    if (r.enabled(key)) runCatching { tintContent(chain.thisObject as View) }
+                        .onFailure { fallback("device-space foreground", it) }
+                }
+            }
+            r.module.deoptimize(method)
+        }
+    }
+
+    private fun tintHeaderText(view: TextView) {
+        val header = synchronized(headerTexts) { headerTexts[view] } ?: return
+        // TextAppearance can replace the list without calling either public color setter.
+        header.colors.observe(view.textColors)
+        val active = clockDateColoring()
+        val desired = if (active) ColorStateList.valueOf(colors(header.context.get() ?: view.context).active)
+            else header.colors.nativeColor
+        if (view.textColors !== desired) writeHeaderColor { view.setTextColor(desired) }
+        header.colors.markApplied(if (active) view.textColors else null)
+    }
+
     private fun tintControls(root: View) {
         val palette = colors(root.context)
         fun foreground(view: View, color: Int) {
@@ -1128,7 +1308,11 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
                 return
             }
             if (view is TextView && QsAppearanceRules.primaryHeaderText(name)) {
-                if (view.currentTextColor != palette.active) view.setTextColor(palette.active)
+                synchronized(headerTexts) {
+                    headerTexts.getOrPut(view) { HeaderTextBinding(root.context, view.textColors) }
+                        .context = WeakReference(root.context)
+                }
+                tintHeaderText(view)
             }
             if (view is ViewGroup) for (index in 0 until view.childCount) visit(view.getChildAt(index))
         }
@@ -1211,6 +1395,7 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
             }
             visit(root)
         }
+        r.preferences.registerOnSharedPreferenceChangeListener(headerPreferenceListener)
     }
 
     private fun installNotificationButtons() {
@@ -1501,6 +1686,24 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         r.hook("qs-appearance:media-20dp-radius", radius) { chain ->
             if (r.enabled(key)) 20f * (context.get(chain.thisObject) as Context).resources.displayMetrics.density else chain.proceed()
         }
+        val coverRadius = dialog.getDeclaredMethod("getCoverImgRadius")
+        r.hook("qs-appearance:media-20dp-cover-endpoint", coverRadius) { chain ->
+            if (r.enabled(key)) 20f * (context.get(chain.thisObject) as Context).resources.displayMetrics.density
+                else chain.proceed()
+        }
+        val launchCover = holder.getDeclaredMethod("applyPhotoCoverLaunchOutline")
+        val launchRadius = r.field(holder, "photoCoverLaunchRadius")
+        val coverLayout = r.field(holder, "mMediaCoverLayout")
+        r.hook("qs-appearance:media-cover-start-radius", launchCover) { chain ->
+            chain.proceed().also {
+                if (r.enabled(key)) {
+                    val view = item.get(chain.thisObject) as View
+                    // The native initializer smooths the design radius again before frame updates.
+                    launchRadius.setFloat(chain.thisObject, 20f * view.resources.displayMetrics.density)
+                    (coverLayout.get(chain.thisObject) as? View)?.invalidateOutline()
+                }
+            }
+        }
         val master = dialog.getDeclaredMethod("updateContainerMasterClip", Float::class.javaPrimitiveType,
             Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Float::class.javaPrimitiveType,
             Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
@@ -1514,6 +1717,8 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         // alone is insufficient: the master-clip code replaces non-positive weights with 3.
         for (name in listOf(
             "${holder.name}\$applyAppIconOutlineProvider\$1",
+            "${holder.name}\$applyPhotoCoverLaunchOutline\$1",
+            "${holder.name}\$applyPhotoCoverLayoutClip\$1",
             "${dialog.name}\$applyCarouselContainerOutline\$1",
             "${dialog.name}\$prepareContainerMasterClip\$1",
         )) {
@@ -1521,7 +1726,10 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
             r.hook("qs-appearance:media-standard-outline:$name", outline) { chain ->
                 if (!r.enabled(key)) return@hook chain.proceed()
                 val previous = standardOutlineScope.get()
-                standardOutlineScope.set((chain.getArg(1) as Outline) to 20f * (chain.getArg(0) as View).resources.displayMetrics.density)
+                // Preserve the scale-compensated local radius while the cover animates.
+                val maximum = if (name == "${holder.name}\$applyPhotoCoverLaunchOutline\$1") null
+                    else 20f * (chain.getArg(0) as View).resources.displayMetrics.density
+                standardOutlineScope.set((chain.getArg(1) as Outline) to maximum)
                 try { chain.proceed() } finally {
                     if (previous == null) standardOutlineScope.remove() else standardOutlineScope.set(previous)
                 }
@@ -1539,11 +1747,17 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
             val bottom = chain.getArg(3) as Int
             if (right <= left || bottom <= top) target.first.setEmpty()
             else target.first.setRoundRect(left, top, right, bottom,
-                minOf((chain.getArg(4) as Float).coerceAtLeast(0f), target.second ?: Float.POSITIVE_INFINITY,
-                    minOf(right - left, bottom - top) / 2f))
+                QsShapeRules.outlineRadius(chain.getArg(4) as Float, right - left, bottom - top, target.second))
             null
         }
-        listOf(resolve, radius, master, smooth).filterNot { java.lang.reflect.Modifier.isNative(it.modifiers) }
+        listOf(resolve, radius, coverRadius, launchCover, master, smooth).filterNot { java.lang.reflect.Modifier.isNative(it.modifiers) }
+            .forEach { r.module.deoptimize(it) }
+        val pager = r.type("com.oplus.systemui.qs.media.OplusMediaViewPagerAdapter")
+        pager.declaredMethods.filter { it.name in setOf("setPhotoClipForLaunchAnimation", "setViewPagerScrolling") }
+            .forEach { r.module.deoptimize(it) }
+        r.module.deoptimize(r.type("com.oplusos.systemui.animation.MediaDialogLaunchAnimatorController")
+            .getDeclaredMethod("applyFrameCornerRadii", r.type("com.android.systemui.animation.TransitionAnimator\$State"), Float::class.javaPrimitiveType))
+        r.type("com.android.systemui.animation.OplusMediaPanelAnimator").declaredMethods.filter { it.name == "prepareExpand" }
             .forEach { r.module.deoptimize(it) }
     }
 
