@@ -1,4 +1,18 @@
 <resources>
+    <!-- App-defined COUI colors -->
+    <string name="config_settings_app">Settings</string>
+    <string name="config_permission_manager">Permission manager</string>
+    <string name="app_theme_group">Icons</string>
+    <string name="app_theme_own_icon">Ignore system theme colors</string>
+    <string name="app_theme_own_icon_desc">Prevent the system from overriding icons and colors</string>
+    <string name="restart_settings_app">Restart Settings?</string>
+    <string name="restart_permission_manager">Restart Permission manager?</string>
+    <!-- Wallpaper & personalization -->
+    <string name="config_uxdesign">Wallpaper &amp; personalization</string>
+    <string name="wallpaper_colors_group">Static wallpaper colors</string>
+    <string name="wallpaper_colors_2025_title">Optimize color scheme</string>
+    <string name="wallpaper_colors_2025_desc">Use Spec 2025 for static wallpaper colors</string>
+    <string name="restart_uxdesign">Restart Wallpaper &amp; personalization?</string>
     <!-- WeType keyboard -->
     <string name="config_wetype">WeType</string>
     <string name="config_font_group">Font</string>
@@ -49,7 +63,6 @@
     <string name="config_native_clipboard_desc">Force enable the native clipboard</string>
     <!-- Status bar: battery -->
     <string name="config_battery_icon">Battery icon</string>
-    <string name="config_tile_icons">Tile icons</string>
     <string name="config_auto_brightness_icon_clip_bypass">Optimize automatic brightness icon</string>
     <string name="config_auto_brightness_icon_clip_bypass_desc">Prevent clipping the automatic brightness icon</string>
     <string name="config_battery_level_display">Normalize battery display</string>
@@ -104,6 +117,10 @@
     <string name="config_apps_group">Apps</string>
     <string name="config_system_ui">System UI</string>
     <string name="config_control_center">Control center</string>
+    <string name="config_notification_control_center">Notifications and control center</string>
+    <string name="config_notification_center">Notification center</string>
+    <string name="notification_clock_date_colors_title">Clock and date colors</string>
+    <string name="notification_clock_date_colors_desc">Match clock and date colors to the wallpaper</string>
     <string name="config_disable_tile_icon_animation">Disable icon animations</string>
     <string name="config_disable_tile_icon_animation_desc">Disable Lottie icon animations for tiles</string>
     <string name="config_system_ui_package">com.android.systemui</string>

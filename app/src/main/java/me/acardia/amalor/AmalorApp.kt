@@ -56,6 +56,8 @@ import me.acardia.amalor.ui.config.NetworkTypeIconScreen
 import me.acardia.amalor.ui.config.SystemUiOtherScreen
 import me.acardia.amalor.ui.config.BackGestureScreen
 import me.acardia.amalor.ui.config.WeTypeScreen
+import me.acardia.amalor.ui.config.WallpaperColorsScreen
+import me.acardia.amalor.ui.config.AppThemeScreen
 import me.acardia.amalor.ui.navigation.AmalorRoute
 import me.acardia.amalor.ui.settings.SettingsScreen
 import me.acardia.amalor.ui.about.AboutScreen
@@ -101,6 +103,8 @@ fun AmalorApp(
     var launcherWidgets by remember { mutableStateOf(false) }
     var launcherColorfulDots by remember { mutableStateOf(false) }
     var weTypeFollowSystemFont by remember { mutableStateOf(false) }
+    var wallpaperColors2025 by remember { mutableStateOf(false) }
+    var appThemeOverrides by remember { mutableStateOf<Map<AppThemeTarget, Boolean>>(emptyMap()) }
     var statusBarMargins by remember { mutableStateOf(false) }
     var statusBarLeft by remember { mutableIntStateOf(0) }
     var statusBarRight by remember { mutableIntStateOf(0) }
@@ -117,6 +121,7 @@ fun AmalorApp(
             val synced = runCatching {
                 networkPreferences!!.edit().apply {
                     NativeFeatureOptions.KEYS.forEach { putBoolean(it, localNetworkPreferences.getBoolean(it, false)) }
+                    AppThemeTarget.entries.forEach { putBoolean(it.preferenceKey, localNetworkPreferences.getBoolean(it.preferenceKey, false)) }
                     StatusBarMarginOptions.copyTo(localNetworkPreferences, this)
                     LauncherIconOptions.copyTo(localNetworkPreferences, this)
                 }
@@ -130,6 +135,7 @@ fun AmalorApp(
                     .putInt(LogOptions.KEY, localNetworkPreferences.getInt(LogOptions.KEY, LogOptions.INFO))
                     .putInt(LauncherOptions.LANDING, localNetworkPreferences.getInt(LauncherOptions.LANDING, 0))
                     .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, localNetworkPreferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false))
+                    .putBoolean(WallpaperColorOptions.SPEC_2025, localNetworkPreferences.getBoolean(WallpaperColorOptions.SPEC_2025, false))
                     .commit()
             }.getOrDefault(false)
             if (synced) localNetworkPreferences.edit().putBoolean("pending_sync", false).apply()
@@ -144,6 +150,7 @@ fun AmalorApp(
         networkFont = NetworkTypeOptions.supportedFont(localNetworkPreferences.getInt(NetworkTypeOptions.FONT, 0))
         packageUpdateM3e = localNetworkPreferences.getBoolean(PackageUpdateOptions.ENABLED, false)
         nativeFeatures = NativeFeatureOptions.KEYS.associateWith { localNetworkPreferences.getBoolean(it, false) }
+        appThemeOverrides = AppThemeTarget.entries.associateWith { localNetworkPreferences.getBoolean(it.preferenceKey, false) }
         batteryBodyFill = localNetworkPreferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)
         brightnessIconClipBypass = localNetworkPreferences.getBoolean(BrightnessOptions.ENABLED, BrightnessOptions.DEFAULT_ENABLED)
         tileAnimationsDisabled = localNetworkPreferences.getBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, AnimationOptions.DEFAULT_DISABLED)
@@ -152,6 +159,7 @@ fun AmalorApp(
         launcherWidgets = localNetworkPreferences.getBoolean(LauncherIconOptions.WIDGETS, false)
         launcherColorfulDots = localNetworkPreferences.getBoolean(LauncherIconOptions.COLORFUL_DOTS, false)
         weTypeFollowSystemFont = localNetworkPreferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false)
+        wallpaperColors2025 = localNetworkPreferences.getBoolean(WallpaperColorOptions.SPEC_2025, false)
         statusBarMargins = localNetworkPreferences.getBoolean(StatusBarMarginOptions.ENABLED, false)
         statusBarLeft = StatusBarMarginOptions.offset(localNetworkPreferences.getInt(StatusBarMarginOptions.LEFT, 0))
         statusBarRight = StatusBarMarginOptions.offset(localNetworkPreferences.getInt(StatusBarMarginOptions.RIGHT, 0))
@@ -162,6 +170,7 @@ fun AmalorApp(
                 val synced = runCatching {
                     preferences.edit().apply {
                         NativeFeatureOptions.KEYS.forEach { putBoolean(it, nativeFeatures[it] == true) }
+                        AppThemeTarget.entries.forEach { putBoolean(it.preferenceKey, appThemeOverrides[it] == true) }
                         StatusBarMarginOptions.copyTo(localNetworkPreferences, this)
                         LauncherIconOptions.copyTo(localNetworkPreferences, this)
                     }.putInt(STATUS_BAR_MODE_KEY, statusBarMode)
@@ -173,7 +182,8 @@ fun AmalorApp(
                         .putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, tileAnimationsDisabled)
                         .putInt(LogOptions.KEY, logLevel)
                         .putInt(LauncherOptions.LANDING, launcherLanding)
-                        .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont).commit()
+                        .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont)
+                        .putBoolean(WallpaperColorOptions.SPEC_2025, wallpaperColors2025).commit()
                 }.getOrDefault(false)
                 if (!synced) return@let
                 localNetworkPreferences.edit().putBoolean("pending_sync", false).apply()
@@ -185,6 +195,7 @@ fun AmalorApp(
             networkFont = NetworkTypeOptions.supportedFont(preferences.getInt(NetworkTypeOptions.FONT, NetworkTypeOptions.OFFICIAL))
             packageUpdateM3e = preferences.getBoolean(PackageUpdateOptions.ENABLED, false)
             nativeFeatures = NativeFeatureOptions.KEYS.associateWith { preferences.getBoolean(it, false) }
+            appThemeOverrides = AppThemeTarget.entries.associateWith { preferences.getBoolean(it.preferenceKey, false) }
             batteryBodyFill = preferences.getBoolean(BatteryOptions.ENABLED, BatteryOptions.DEFAULT_ENABLED)
             brightnessIconClipBypass = preferences.getBoolean(BrightnessOptions.ENABLED, BrightnessOptions.DEFAULT_ENABLED)
             tileAnimationsDisabled = preferences.getBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, AnimationOptions.DEFAULT_DISABLED)
@@ -193,12 +204,14 @@ fun AmalorApp(
             launcherWidgets = preferences.getBoolean(LauncherIconOptions.WIDGETS, false)
             launcherColorfulDots = preferences.getBoolean(LauncherIconOptions.COLORFUL_DOTS, false)
             weTypeFollowSystemFont = preferences.getBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, false)
+            wallpaperColors2025 = preferences.getBoolean(WallpaperColorOptions.SPEC_2025, false)
             statusBarMargins = preferences.getBoolean(StatusBarMarginOptions.ENABLED, false)
             statusBarLeft = StatusBarMarginOptions.offset(preferences.getInt(StatusBarMarginOptions.LEFT, 0))
             statusBarRight = StatusBarMarginOptions.offset(preferences.getInt(StatusBarMarginOptions.RIGHT, 0))
             networkPreferences = preferences
             localNetworkPreferences.edit().apply {
                 NativeFeatureOptions.KEYS.forEach { putBoolean(it, nativeFeatures[it] == true) }
+                AppThemeTarget.entries.forEach { putBoolean(it.preferenceKey, appThemeOverrides[it] == true) }
                 StatusBarMarginOptions.copyTo(preferences, this)
                 LauncherIconOptions.copyTo(preferences, this)
             }.putInt(STATUS_BAR_MODE_KEY, statusBarMode)
@@ -210,7 +223,8 @@ fun AmalorApp(
                 .putBoolean(AnimationOptions.DISABLE_TILE_ANIMATIONS, tileAnimationsDisabled)
                 .putInt(LogOptions.KEY, logLevel)
                 .putInt(LauncherOptions.LANDING, launcherLanding)
-                .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont).apply()
+                .putBoolean(WeTypeOptions.FOLLOW_SYSTEM_FONT, weTypeFollowSystemFont)
+                .putBoolean(WallpaperColorOptions.SPEC_2025, wallpaperColors2025).apply()
         }
     }
     val windowInfo = LocalWindowInfo.current
@@ -305,6 +319,10 @@ fun AmalorApp(
                              onOpenSystemUi = { navigator.push(AmalorRoute.SystemUiStyle) },
                              onOpenLauncher = { navigator.push(AmalorRoute.Launcher) },
                              onOpenWeType = { navigator.push(AmalorRoute.WeType) },
+                             onOpenWallpaperColors = { navigator.push(AmalorRoute.WallpaperColors) },
+                             onOpenAppTheme = { target ->
+                                 navigator.push(if (target == AppThemeTarget.SETTINGS) AmalorRoute.SettingsAppTheme else AmalorRoute.PermissionsAppTheme)
+                             },
                         )
                          Page.SETTINGS -> SettingsScreen(
                              outerPadding = mainPadding, settings = themeSettings,
@@ -353,6 +371,43 @@ fun AmalorApp(
                     },
                     canRestart = rootState?.authorized == true,
                     onRestart = ::restartWeType,
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.WallpaperColors>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                WallpaperColorsScreen(
+                    enabled = wallpaperColors2025,
+                    onEnabledChange = { value ->
+                        if (saveNetworkOption { putBoolean(WallpaperColorOptions.SPEC_2025, value) }) wallpaperColors2025 = value
+                    },
+                    canRestart = rootState?.authorized == true,
+                    onRestart = ::restartWallpaperColors,
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.SettingsAppTheme>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                AppThemeScreen(
+                    target = AppThemeTarget.SETTINGS,
+                    enabled = appThemeOverrides[AppThemeTarget.SETTINGS] == true,
+                    onEnabledChange = { value ->
+                        if (saveNetworkOption { putBoolean(AppThemeTarget.SETTINGS.preferenceKey, value) })
+                            appThemeOverrides = appThemeOverrides + (AppThemeTarget.SETTINGS to value)
+                    },
+                    canRestart = rootState?.authorized == true,
+                    onRestart = { restartAppTheme(AppThemeTarget.SETTINGS) },
+                    onBack = { navigator.pop() },
+                )
+            }
+            entry<AmalorRoute.PermissionsAppTheme>(swipeDismiss = NavSwipeDirection.LeftToRight) {
+                AppThemeScreen(
+                    target = AppThemeTarget.PERMISSIONS,
+                    enabled = appThemeOverrides[AppThemeTarget.PERMISSIONS] == true,
+                    onEnabledChange = { value ->
+                        if (saveNetworkOption { putBoolean(AppThemeTarget.PERMISSIONS.preferenceKey, value) })
+                            appThemeOverrides = appThemeOverrides + (AppThemeTarget.PERMISSIONS to value)
+                    },
+                    canRestart = rootState?.authorized == true,
+                    onRestart = { restartAppTheme(AppThemeTarget.PERMISSIONS) },
                     onBack = { navigator.pop() },
                 )
             }
@@ -409,6 +464,14 @@ fun AmalorApp(
             }
             entry<AmalorRoute.ControlCenter>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 ControlCenterScreen(
+                    materialEnabled = nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true,
+                    clockDateColors = nativeFeatures[NativeFeatureOptions.NOTIFICATION_CLOCK_DATE_COLORS] == true,
+                    onClockDateColorsChange = { value ->
+                        if (nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true &&
+                            saveNetworkOption { putBoolean(NativeFeatureOptions.NOTIFICATION_CLOCK_DATE_COLORS, value) }) {
+                            nativeFeatures = nativeFeatures + (NativeFeatureOptions.NOTIFICATION_CLOCK_DATE_COLORS to value)
+                        }
+                    },
                     brightnessIconClipBypass = brightnessIconClipBypass,
                     onBrightnessIconClipBypassChange = { value ->
                         if (saveNetworkOption { putBoolean(BrightnessOptions.ENABLED, value) }) brightnessIconClipBypass = value
@@ -512,6 +575,14 @@ private fun restartLauncher(): Boolean = runCatching {
 
 private fun restartWeType(): Boolean = runCatching {
     Runtime.getRuntime().exec(arrayOf("su", "-c", "killall ${WeTypeOptions.PACKAGE_NAME} ${WeTypeOptions.IME_PROCESS}")).waitFor() == 0
+}.getOrDefault(false)
+
+private fun restartWallpaperColors(): Boolean = runCatching {
+    Runtime.getRuntime().exec(arrayOf("su", "-c", "am force-stop ${WallpaperColorOptions.PACKAGE_NAME}")).waitFor() == 0
+}.getOrDefault(false)
+
+private fun restartAppTheme(target: AppThemeTarget): Boolean = runCatching {
+    Runtime.getRuntime().exec(arrayOf("su", "-c", "killall ${target.packageName}")).waitFor() == 0
 }.getOrDefault(false)
 
 private fun restartSystemUi(): Boolean = runCatching {

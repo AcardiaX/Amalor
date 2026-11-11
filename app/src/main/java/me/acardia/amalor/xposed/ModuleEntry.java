@@ -16,7 +16,11 @@ import me.acardia.amalor.xposed.systemui.TileAnimationHook;
 import me.acardia.amalor.xposed.systemui.NativeFeatureHooks;
 import me.acardia.amalor.xposed.systemui.StatusBarMarginHook;
 import me.acardia.amalor.WeTypeOptions;
+import me.acardia.amalor.WallpaperColorOptions;
+import me.acardia.amalor.AppThemeTarget;
+import me.acardia.amalor.xposed.theme.AppThemeOverlayHook;
 import me.acardia.amalor.xposed.wetype.WeTypeFontHook;
+import me.acardia.amalor.xposed.uxdesign.WallpaperColorHook;
 
 /** Xposed entry point: dispatch by target package, keep feature state in its own hook. */
 public final class ModuleEntry extends XposedModule {
@@ -34,6 +38,10 @@ public final class ModuleEntry extends XposedModule {
     private NativeFeatureHooks nativeFeatures;
     private WeTypeFontHook weTypeFont;
     private boolean weTypeFontInstalled;
+    private WallpaperColorHook wallpaperColors;
+    private boolean wallpaperColorsInstalled;
+    private AppThemeOverlayHook appTheme;
+    private boolean appThemeInstalled;
 
     @Override
     public void onPackageLoaded(XposedModuleInterface.PackageLoadedParam param) {
@@ -47,6 +55,35 @@ public final class ModuleEntry extends XposedModule {
                 "com.android.launcher".equals(Application.getProcessName())) deferLauncherInstall();
         if ("com.android.systemui".equals(param.getPackageName())) install(param.getClassLoader());
         if (WeTypeOptions.PACKAGE_NAME.equals(param.getPackageName()) && param.isFirstPackage()) installWeType();
+        if (WallpaperColorOptions.PACKAGE_NAME.equals(param.getPackageName()) && param.isFirstPackage()) installWallpaperColors(param.getClassLoader());
+        AppThemeTarget target = AppThemeTarget.forPackage(param.getPackageName());
+        if (target != null && param.isFirstPackage()) installAppTheme(param.getClassLoader(), target);
+    }
+
+    private synchronized void installAppTheme(ClassLoader loader, AppThemeTarget target) {
+        if (appThemeInstalled || loader == null) return;
+        try {
+            HookLog.initialize(this);
+            if (appTheme == null) appTheme = new AppThemeOverlayHook(this, loader, target);
+            appTheme.install();
+            appThemeInstalled = true;
+            HookLog.write(this, Log.INFO, "Amalor", "Installed app-defined theme hook: " + target.getPackageName());
+        } catch (Throwable error) {
+            HookLog.write(this, Log.ERROR, "Amalor", "App-defined theme hook unavailable: " + target.getPackageName(), error);
+        }
+    }
+
+    private synchronized void installWallpaperColors(ClassLoader loader) {
+        if (wallpaperColorsInstalled || loader == null) return;
+        try {
+            HookLog.initialize(this);
+            if (wallpaperColors == null) wallpaperColors = new WallpaperColorHook(this, loader);
+            wallpaperColors.install();
+            wallpaperColorsInstalled = true;
+            HookLog.write(this, Log.INFO, "Amalor", "Installed COUI wallpaper ColorSpec 2025 XML hook");
+        } catch (Throwable error) {
+            HookLog.write(this, Log.ERROR, "Amalor", "COUI wallpaper ColorSpec 2025 XML hook unavailable", error);
+        }
     }
 
     private synchronized void installWeType() {
@@ -125,6 +162,8 @@ public final class ModuleEntry extends XposedModule {
     private synchronized void install(ClassLoader loader) {
         if (loader == null) return;
         try { HookLog.initialize(this); } catch (Throwable ignored) { }
+        // Native feature flags are cached at class initialization, before other UI hooks resolve them.
+        networkType.install(loader);
         try {
             if (nativeFeatures == null) nativeFeatures = new NativeFeatureHooks(this, loader);
             nativeFeatures.install();
@@ -140,7 +179,6 @@ public final class ModuleEntry extends XposedModule {
                 HookLog.write(this, Log.ERROR, "Amalor", "package update appearance hook failed", error);
             }
         }
-        networkType.install(loader);
         if (!statusBarMarginInstalled) {
             try {
                 StatusBarMarginHook.install(this, loader);
