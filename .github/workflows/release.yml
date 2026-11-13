@@ -95,6 +95,10 @@ jobs:
             | .[0].tagName // ""')"
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
+      - name: Set up official Codex client
+        if: ${{ vars.RELEASE_NOTES_TRANSPORT == 'codex' }}
+        run: npm install --global @openai/codex@0.168.0
+
       - name: Generate Chinese-first bilingual release notes
         timeout-minutes: 5
         env:
@@ -104,6 +108,7 @@ jobs:
           RELEASE_NOTES_API_KEY: ${{ secrets.RELEASE_NOTES_API_KEY }}
           RELEASE_NOTES_API_URL: ${{ vars.RELEASE_NOTES_API_URL || 'https://api.openai.com/v1/chat/completions' }}
           RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL || 'gpt-4.1-mini' }}
+          RELEASE_NOTES_TRANSPORT: ${{ vars.RELEASE_NOTES_TRANSPORT || 'chat' }}
         run: python3 .github/scripts/generate_release_notes.py ${{ inputs.notes_only && '--require-ai' || '' }}
 
       - name: Upload release notes

@@ -21,10 +21,17 @@ Release 工作流自动读取“上一个正式 Release 的 tag → 本次提交
 | Secret | `RELEASE_NOTES_API_KEY` | 模型接口密钥 |
 | Variable | `RELEASE_NOTES_API_URL` | 完整的 Chat Completions 地址，默认 `https://api.openai.com/v1/chat/completions` |
 | Variable | `RELEASE_NOTES_MODEL` | 模型名称，默认 `gpt-4.1-mini` |
+| Variable | `RELEASE_NOTES_TRANSPORT` | `chat`（默认）为通用 HTTP 接口；`codex` 使用官方 Codex CLI / Responses |
 
 可使用 OpenAI 或兼容网关。模型需支持 Chat Completions 与 JSON 输出。普通模型使用 `temperature` 和 `max_tokens`；GPT-5/6、o 系列推理模型使用 `max_completion_tokens` 与低推理预算。请求显式关闭流式输出，也可接收网关返回的标准 Chat Completions SSE。密钥只传给日志生成步骤，不写入文件或日志。GitHub 的 `GITHUB_TOKEN` 用于发布与依赖下载，不能代替模型接口密钥。
 
 GitHub Models 已于 2026 年 7 月停用，因此此流程使用可配置接口，而非旧的 GitHub Models 服务。
+
+### AgentRouter
+
+AgentRouter 官方说明了支持的编程客户端范围。若普通 HTTP 请求在 Actions 中收到 HTML，可将 `RELEASE_NOTES_TRANSPORT` 设为 `codex`，沿用已配置的密钥与模型。工作流安装固定版本的官方 Codex CLI，并按其 [Codex 接入文档](https://agentrouter.org/docs/codex.html) 使用 Responses；不会伪装客户端或执行网关返回的网页脚本。
+
+此模式下 `RELEASE_NOTES_API_URL` 可填写 provider Base URL（例如 `https://agentrouter.org/v1`）；已有的 `/v1/chat/completions` 地址也会转换为该 Base URL。客户端只读取预先整理好的提交证据，使用临时配置和只读模式，关闭 shell、子代理等生成工具；最终 JSON 仍通过语言和提交覆盖校验。
 
 ## 以后怎么写
 

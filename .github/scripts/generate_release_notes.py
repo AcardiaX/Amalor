@@ -5,8 +5,10 @@ import json
 import os
 import re
 import subprocess
+import shutil
 import sys
 import time
+import tempfile
 import urllib.error
 import urllib.request
 from collections import Counter
@@ -270,6 +272,55 @@ def summarize(commits, api_url, model, api_key):
             raise
 
 
+def summarize_codex(commits, api_url, model, api_key):
+    """Use the supported official coding client for gateways requiring Responses."""
+    executable = shutil.which("codex")
+    if executable is None:
+        raise ReleaseNotesError("codex_transport: official Codex CLI is not installed")
+    endpoint = urlsplit(api_url)
+    if endpoint.scheme != "https" or not endpoint.netloc or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
+        raise ReleaseNotesError("configuration: use an HTTPS Codex provider URL without credentials")
+    base_url = api_url.rstrip("/")
+    for suffix in ("/chat/completions", "/responses"):
+        if base_url.endswith(suffix):
+            base_url = base_url[:-len(suffix)]
+            break
+    if not endpoint.path or endpoint.path == "/":
+        base_url += "/v1"
+    text = {"type": "string"}
+    pair = {"type": "object", "additionalProperties": False, "required": ["zh", "en"],
+            "properties": {"zh": text, "en": text}}
+    item = {"type": "object", "additionalProperties": False, "required": ["kind", "zh", "en", "commits"],
+            "properties": {"kind": {"type": "string", "enum": list(CATEGORIES)}, "zh": text, "en": text,
+                           "commits": {"type": "array", "items": {"type": "string", "enum": [commit["id"] for commit in commits]}}}}
+    schema = {"type": "object", "additionalProperties": False, "required": ["highlights", "items"],
+              "properties": {"highlights": {"type": "array", "items": pair}, "items": {"type": "array", "items": item}}}
+    prompt = SYSTEM_PROMPT + "\n\nUse only the following evidence. No tools or repository changes are needed.\n" + json.dumps(evidence(commits), ensure_ascii=False)
+    provider = '{name="ReleaseNotes",base_url=' + json.dumps(base_url) + ',env_key="RELEASE_NOTES_API_KEY",wire_api="responses"}'
+    with tempfile.TemporaryDirectory(prefix="amalor-notes-codex-") as temp:
+        home = Path(temp)
+        schema_path, output = home / "schema.json", home / "notes.json"
+        schema_path.write_text(json.dumps(schema), encoding="utf-8")
+        command = [executable, "exec", "--ignore-user-config", "--ephemeral", "--sandbox", "read-only", "--color", "never",
+                   "--disable", "shell_tool", "--disable", "multi_agent", "--disable", "apps", "--disable", "plugins",
+                   "--disable", "hooks", "--disable", "browser_use", "-c", 'model_provider="release_notes"',
+                   "-c", "model_providers.release_notes=" + provider, "-c", 'model_reasoning_effort="low"',
+                   "-m", model, "--output-schema", str(schema_path), "--output-last-message", str(output), "-"]
+        env = dict(os.environ, CODEX_HOME=str(home), RELEASE_NOTES_API_KEY=api_key)
+        try:
+            result = subprocess.run(command, input=prompt, capture_output=True, encoding="utf-8", errors="replace", env=env, timeout=240)
+        except subprocess.TimeoutExpired as error:
+            raise ReleaseNotesError("codex_transport: client timed out") from error
+        if result.returncode:
+            # Capture full client output privately; only a numeric HTTP/exit status is logged.
+            status = re.search(r"(?i)(?:HTTP|status(?:\s+code)?)\s*[:=]?\s*(\d{3})", result.stderr)
+            detail = "HTTP " + status[1] if status else "exit " + str(result.returncode)
+            raise ReleaseNotesError("codex_transport: official client failed (" + detail + ")")
+        if not output.is_file() or output.stat().st_size > RESPONSE_LIMIT:
+            raise ReleaseNotesError("codex_transport: missing or oversized final response")
+        return validate_notes(decode_notes(output.read_text(encoding="utf-8")), commits)
+
+
 def escape_markdown(text):
     return re.sub(r"([\\`*_\[\]<>])", r"\\\1", " ".join(text.split()))
 
@@ -349,8 +400,12 @@ def main():
     reason = "configuration: RELEASE_NOTES_API_KEY is missing" if not api_key else "configuration: --no-ai was requested"
     if commits and api_key and not args.no_ai:
         try:
-            notes = summarize(commits, os.environ.get("RELEASE_NOTES_API_URL", "https://api.openai.com/v1/chat/completions"),
-                              os.environ.get("RELEASE_NOTES_MODEL", "gpt-4.1-mini"), api_key)
+            transport = os.environ.get("RELEASE_NOTES_TRANSPORT", "chat").strip().lower()
+            if transport not in ("chat", "codex"):
+                raise ReleaseNotesError("configuration: RELEASE_NOTES_TRANSPORT must be chat or codex")
+            generate = summarize_codex if transport == "codex" else summarize
+            notes = generate(commits, os.environ.get("RELEASE_NOTES_API_URL", "https://api.openai.com/v1/chat/completions"),
+                             os.environ.get("RELEASE_NOTES_MODEL", "gpt-4.1-mini"), api_key)
             semantic = True
         except (urllib.error.URLError, TimeoutError, ValueError, KeyError, TypeError, IndexError) as error:
             # Never echo the request, key, provider response or arbitrary error body into logs.
