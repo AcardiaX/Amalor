@@ -35,6 +35,8 @@ AgentRouter 官方说明了支持的编程客户端范围。若普通 HTTP 请�
 
 若同一令牌与模型在 OpenCode 的 `@ai-sdk/openai` provider 中可用，可使用 `opencode` 模式对齐这一客户端。工作流使用固定版本的官方 CLI，创建临时 Responses provider 和仅输出日志的 primary agent，拒绝工具执行、关闭共享与外部插件；不会更改用户正在运行的 OpenCode 配置。每次预览/发布都会启动新的临时客户端配置。
 
+自定义模型显式声明日志调用预算：上下文 64K、输出 8K。未声明 `limit` 时，OpenCode 会将未知模型的上下文和输出上限解析为 0，不能仅复制 provider 的地址和模型名。
+
 ## 以后怎么写
 
 **不需要手写 changelog。** 正常提交代码，运行 Release 工作流并填写版本名即可。

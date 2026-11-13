@@ -357,8 +357,9 @@ def summarize_opencode(commits, api_url, model, api_key):
               "provider": {"release_notes": {"npm": "@ai-sdk/openai", "name": "ReleaseNotes",
                             "options": {"baseURL": base_url, "apiKey": "{env:RELEASE_NOTES_API_KEY}", "timeout": 180000,
                                         "headerTimeout": 60000, "chunkTimeout": 60000},
-                           "models": {model: {"name": model, "reasoning": True, "temperature": False,
-                                              "options": {"reasoningEffort": "low", "store": False}}}}}}
+                            "models": {model: {"name": model, "reasoning": True, "temperature": False,
+                                               "limit": {"context": 65536, "output": 8192},
+                                               "options": {"reasoningEffort": "low", "store": False}}}}}}
     prompt = "Generate release-note JSON from this evidence. No tools are needed.\n" + json.dumps(evidence(commits), ensure_ascii=False)
     with tempfile.TemporaryDirectory(prefix="amalor-notes-opencode-") as temp:
         home = Path(temp)
