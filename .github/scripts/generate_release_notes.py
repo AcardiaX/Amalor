@@ -287,25 +287,18 @@ def summarize_codex(commits, api_url, model, api_key):
             break
     if not endpoint.path or endpoint.path == "/":
         base_url += "/v1"
-    text = {"type": "string"}
-    pair = {"type": "object", "additionalProperties": False, "required": ["zh", "en"],
-            "properties": {"zh": text, "en": text}}
-    item = {"type": "object", "additionalProperties": False, "required": ["kind", "zh", "en", "commits"],
-            "properties": {"kind": {"type": "string", "enum": list(CATEGORIES)}, "zh": text, "en": text,
-                           "commits": {"type": "array", "items": {"type": "string", "enum": [commit["id"] for commit in commits]}}}}
-    schema = {"type": "object", "additionalProperties": False, "required": ["highlights", "items"],
-              "properties": {"highlights": {"type": "array", "items": pair}, "items": {"type": "array", "items": item}}}
     prompt = SYSTEM_PROMPT + "\n\nUse only the following evidence. No tools or repository changes are needed.\n" + json.dumps(evidence(commits), ensure_ascii=False)
     provider = '{name="ReleaseNotes",base_url=' + json.dumps(base_url) + ',env_key="RELEASE_NOTES_API_KEY",wire_api="responses"}'
     with tempfile.TemporaryDirectory(prefix="amalor-notes-codex-") as temp:
         home = Path(temp)
-        schema_path, output = home / "schema.json", home / "notes.json"
-        schema_path.write_text(json.dumps(schema), encoding="utf-8")
+        output = home / "notes.json"
         command = [executable, "exec", "--ignore-user-config", "--ephemeral", "--sandbox", "read-only", "--color", "never",
                    "--disable", "shell_tool", "--disable", "multi_agent", "--disable", "apps", "--disable", "plugins",
-                   "--disable", "hooks", "--disable", "browser_use", "-c", 'model_provider="release_notes"',
+                   "--disable", "hooks", "--disable", "browser_use", "--disable", "enable_request_compression",
+                   "--disable", "api_key_model_discovery", "--disable", "unbounded_connection_retries",
+                   "-c", 'model_provider="release_notes"',
                    "-c", "model_providers.release_notes=" + provider, "-c", 'model_reasoning_effort="low"',
-                   "-m", model, "--output-schema", str(schema_path), "--output-last-message", str(output), "-"]
+                   "-m", model, "--output-last-message", str(output), "-"]
         env = dict(os.environ, CODEX_HOME=str(home), RELEASE_NOTES_API_KEY=api_key)
         try:
             result = subprocess.run(command, input=prompt, capture_output=True, encoding="utf-8", errors="replace", env=env, timeout=240)
