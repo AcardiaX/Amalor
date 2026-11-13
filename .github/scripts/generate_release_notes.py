@@ -315,6 +315,25 @@ def summarize_codex(commits, api_url, model, api_key):
             # Capture full client output privately; only a numeric HTTP/exit status is logged.
             status = re.search(r"(?i)(?:HTTP|status(?:\s+code)?)\s*[:=]?\s*(\d{3})", result.stderr)
             detail = "HTTP " + status[1] if status else "exit " + str(result.returncode)
+            for marker, label in (("stream disconnected", "Responses stream disconnected"),
+                                  ("error sending request", "network request failed"),
+                                  ("error decoding response", "response decoding failed"),
+                                  ("missing environment variable", "provider environment key missing"),
+                                  ("invalid config", "invalid client configuration"),
+                                  ("context window", "model context limit"),
+                                  ("no available channel", "model channel unavailable")):
+                if marker in result.stderr.lower():
+                    detail += "; " + label
+                    break
+            # Emit a bounded client-error line, not the full transcript. Redact the only
+            # credential passed to this child and any credential-shaped text or URL query.
+            client_error = next((line for line in reversed(result.stderr.splitlines())
+                                 if re.match(r"(?i)^\s*(?:error|caused by)[: ]", line)), "")
+            if client_error:
+                client_error = client_error.replace(api_key, "[redacted]")
+                client_error = re.sub(r"(?i)(?:bearer\s+\S+|sk-[\w-]+)", "[redacted]", client_error)
+                client_error = re.sub(r"https?://\S+", "[endpoint]", client_error)
+                print("Codex client diagnostic: " + escape_markdown(client_error[:500]), file=sys.stderr)
             raise ReleaseNotesError("codex_transport: official client failed (" + detail + ")")
         if not output.is_file() or output.stat().st_size > RESPONSE_LIMIT:
             raise ReleaseNotesError("codex_transport: missing or oversized final response")
