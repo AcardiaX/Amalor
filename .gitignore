@@ -8,3 +8,5 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+/release-notes.md
+__pycache__/
