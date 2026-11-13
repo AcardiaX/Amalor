@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
@@ -41,12 +42,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
+import kotlin.math.roundToInt
 
 private val CornerRadius = 16.dp
 private val ConnectionRadius = 5.dp
@@ -127,32 +131,31 @@ fun SegmentedColumn(
         val lastVisible = items.indexOfLast { it.visible }
         items.forEachIndexed { index, item ->
             key(item.key ?: index) {
-                val topRadius by animateDpAsState(
-                    if (item.forceFlatTop) 0.dp else if (index == firstVisible) CornerRadius else ConnectionRadius,
-                    MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    label = "segmented_top_radius",
-                )
-                val bottomRadius by animateDpAsState(
-                    if (item.forceFlatBottom) 0.dp else if (index == lastVisible) CornerRadius else ConnectionRadius,
-                    MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    label = "segmented_bottom_radius",
-                )
-                val progress by animateFloatAsState(
+                val topRadius = if (item.forceFlatTop) 0.dp else if (index == firstVisible) CornerRadius else ConnectionRadius
+                val bottomRadius = if (item.forceFlatBottom) 0.dp else if (index == lastVisible) CornerRadius else ConnectionRadius
+                val shape = remember(topRadius, bottomRadius) {
+                    RoundedCornerShape(topRadius, topRadius, bottomRadius, bottomRadius)
+                }
+                val progress = animateFloatAsState(
                     if (item.visible) 1f else 0f,
                     MaterialTheme.motionScheme.defaultEffectsSpec(),
                     label = "segmented_visibility",
                 )
-                val shape = RoundedCornerShape(topRadius, topRadius, bottomRadius, bottomRadius)
-                val topPadding by animateDpAsState(
+                val topPadding = animateDpAsState(
                     item.customTopPadding ?: if (index == firstVisible) 0.dp else ListItemDefaults.SegmentedGap,
                     MaterialTheme.motionScheme.defaultSpatialSpec(),
                     label = "segmented_top_padding",
                 )
                 Box(
                     Modifier
-                        .padding(top = topPadding)
+                        .layout { measurable, constraints ->
+                            val gap = (topPadding.value.toPx() * progress.value.coerceIn(0f, 1f))
+                                .roundToInt().coerceIn(0, constraints.maxHeight)
+                            val child = measurable.measure(constraints.offset(vertical = -gap))
+                            layout(child.width, child.height + gap) { child.placeRelative(0, gap) }
+                        }
                         .graphicsLayer {
-                            alpha = progress
+                            alpha = progress.value
                         },
                 ) {
                     CompositionLocalProvider(LocalSegmentedItemShape provides shape) {
@@ -181,18 +184,26 @@ fun BaseWidget(
     interactionSource: MutableInteractionSource? = null,
     pressedShape: Shape = RoundedCornerShape(CornerRadius),
     centerContent: Boolean = false,
+    selected: Boolean = false,
+    leadingContent: (@Composable () -> Unit)? = null,
 ) {
     val internalPadding = (4 * LocalDensity.current.fontScale).dp
     val haptic = LocalHapticFeedback.current
     val resolvedInteractionSource = interactionSource ?: remember { MutableInteractionSource() }
-    val trailingInteractionSource = remember { MutableInteractionSource() }
     val trailingContentInteractionSource = if (onTrailingClick != null || trailingDivider) {
-        trailingInteractionSource
+        remember { MutableInteractionSource() }
     } else {
         resolvedInteractionSource
     }
+    val pressed = if (onClick != null) resolvedInteractionSource.collectIsPressedAsState().value else false
+    val animatedShape = rememberAnimatedShape(
+        if (enabled && pressed) pressedShape else shape,
+        MaterialTheme.motionScheme.fastSpatialSpec(),
+    )
     val alpha = if (enabled) 1f else 0.38f
-    val baseContentColor = MaterialTheme.colorScheme.onSurface
+    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceBright
+    val baseContentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val leadingColor = if (selected) baseContentColor else MaterialTheme.colorScheme.onSurfaceVariant
     val descriptionColor = baseContentColor.copy(alpha = 0.7f)
     val headline: @Composable () -> Unit = {
         Box(
@@ -206,21 +217,22 @@ fun BaseWidget(
         }
     }
     val colors = ListItemDefaults.colors(
-        containerColor = MaterialTheme.colorScheme.surfaceBright,
+        containerColor = containerColor,
         contentColor = baseContentColor,
-        leadingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        leadingContentColor = leadingColor,
         supportingContentColor = descriptionColor,
-        disabledContainerColor = MaterialTheme.colorScheme.surfaceBright,
+        disabledContainerColor = containerColor,
         disabledContentColor = baseContentColor,
-        disabledLeadingContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        disabledLeadingContentColor = leadingColor,
         disabledSupportingContentColor = descriptionColor,
     )
     val shapes = ListItemDefaults.shapes(
-        shape = shape,
-        pressedShape = pressedShape,
-        selectedShape = shape,
-        focusedShape = shape,
-        hoveredShape = shape,
+        shape = animatedShape,
+        pressedShape = animatedShape,
+        selectedShape = animatedShape,
+        focusedShape = animatedShape,
+        hoveredShape = animatedShape,
+        draggedShape = animatedShape,
     )
     if (onClick != null) {
         ListItem(
@@ -244,7 +256,7 @@ fun BaseWidget(
             colors = colors,
             shapes = shapes,
             interactionSource = resolvedInteractionSource,
-            leadingContent = if (icon != null || iconVector != null) {
+            leadingContent = leadingContent ?: if (icon != null || iconVector != null) {
                 {
                 when {
                     icon != null -> androidx.compose.material3.Icon(icon, null, modifier = Modifier.alpha(alpha))
@@ -260,7 +272,7 @@ fun BaseWidget(
                             modifier = Modifier.then(
                                 if (onTrailingClick != null) {
                                     Modifier.clickable(
-                                        interactionSource = trailingInteractionSource,
+                                        interactionSource = trailingContentInteractionSource,
                                         indication = LocalIndication.current,
                                         onClick = onTrailingClick,
                                     )
@@ -286,7 +298,7 @@ fun BaseWidget(
                 }
             },
             colors = colors,
-            leadingContent = if (icon != null || iconVector != null) {
+            leadingContent = leadingContent ?: if (icon != null || iconVector != null) {
                 {
                 when {
                     icon != null -> androidx.compose.material3.Icon(icon, null, modifier = Modifier.alpha(alpha))
@@ -297,7 +309,7 @@ fun BaseWidget(
             trailingContent = trailingContent?.let { content -> { content(trailingContentInteractionSource) } },
             modifier = modifier
                 .fillMaxWidth()
-                .clip(shape)
+                .clip(animatedShape)
                 .then(if (enabled) Modifier else Modifier.semantics { disabled() }),
         )
     }

@@ -91,7 +91,7 @@
     <string name="module_inactive">未激活</string>
     <string name="module_inactive_summary">请在 LSPosed 中启用模块后使用</string>
     <string name="module_active">已激活</string>
-    <string name="myfc_status">MYFC 状态</string>
+    <string name="myfc_status">MYFC 版本</string>
     <string name="app_name">Amalor</string>
     <string name="app_description">为 ColorOS 17 提供一些美味的功能 😋</string>
     

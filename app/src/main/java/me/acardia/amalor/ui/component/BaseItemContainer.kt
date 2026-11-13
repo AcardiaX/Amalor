@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun BaseItemContainer(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val baseShape = LocalSegmentedItemShape.current
+    val baseShape = rememberAnimatedShape(LocalSegmentedItemShape.current, MaterialTheme.motionScheme.fastSpatialSpec())
     val backgroundColor = MaterialTheme.colorScheme.surfaceBright
 
     Surface(
