@@ -4,7 +4,6 @@ import argparse
 import os
 import re
 import subprocess
-from collections import Counter
 from pathlib import Path
 from urllib.parse import quote
 
@@ -81,18 +80,12 @@ def render(commits, repository, tag, base):
     if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repository):
         raise ValueError("Invalid GitHub repository name")
     owner = repository.split("/", 1)[0].lower()
-    counts = Counter(commit["kind"] for commit in commits)
     lines = ["[简体中文](#简体中文) | [English](#english)", ""]
     for language, title in ((0, "简体中文"), (1, "English")):
         lines += ["## " + title, ""]
         if commits:
             lines += ["> 以下为按提交类型自动分类的更新记录。" if language == 0 else
                       "> These updates are automatically categorized from Git commits.", ""]
-            lines += ["### 🌟 亮点" if language == 0 else "### 🌟 Highlights", ""]
-            lines += [f"- 本次包含 {len(commits)} 条提交：新增 {counts['features']}、优化 {counts['improvements']}、"
-                      f"变更 {counts['changes']}、修复 {counts['fixes']}、文档与翻译 {counts['docs']}。" if language == 0 else
-                      f"- {len(commits)} commits: {counts['features']} features, {counts['improvements']} improvements, "
-                      f"{counts['changes']} changes, {counts['fixes']} fixes, and {counts['docs']} documentation/translation updates.", ""]
         lines += ["### 📝 更新内容" if language == 0 else "### 📝 What's Changed", ""]
         if not commits:
             lines += ["本次发布没有新的非合并提交。" if language == 0 else "No new non-merge commits in this release.", ""]
