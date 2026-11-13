@@ -99,6 +99,10 @@ jobs:
         if: ${{ vars.RELEASE_NOTES_TRANSPORT == 'codex' }}
         run: npm install --global @openai/codex@0.168.0
 
+      - name: Set up official OpenCode client
+        if: ${{ vars.RELEASE_NOTES_TRANSPORT == 'opencode' }}
+        run: npm install --global opencode-ai@1.19.5
+
       - name: Generate Chinese-first bilingual release notes
         timeout-minutes: 5
         env:

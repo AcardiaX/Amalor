@@ -333,6 +333,68 @@ def summarize_codex(commits, api_url, model, api_key):
         return validate_notes(decode_notes(output.read_text(encoding="utf-8")), commits)
 
 
+def summarize_opencode(commits, api_url, model, api_key):
+    """Match the verified OpenCode @ai-sdk/openai Responses provider."""
+    executable = shutil.which("opencode")
+    if executable is None:
+        raise ReleaseNotesError("opencode_transport: official OpenCode CLI is not installed")
+    endpoint = urlsplit(api_url)
+    if endpoint.scheme != "https" or not endpoint.netloc or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment:
+        raise ReleaseNotesError("configuration: use an HTTPS OpenCode provider URL without credentials")
+    base_url = api_url.rstrip("/")
+    for suffix in ("/chat/completions", "/responses"):
+        if base_url.endswith(suffix):
+            base_url = base_url[:-len(suffix)]
+            break
+    if not endpoint.path or endpoint.path == "/":
+        base_url += "/v1"
+    config = {"$schema": "https://opencode.ai/config.json", "enabled_providers": ["release_notes"],
+              "model": "release_notes/" + model, "default_agent": "release_notes", "share": "disabled",
+              "autoupdate": False, "snapshot": False, "permission": "deny", "formatter": False, "lsp": False,
+              "plugin": [], "mcp": {}, "instructions": [],
+              "agent": {"release_notes": {"description": "Generate bilingual release notes from supplied Git evidence",
+                         "mode": "primary", "prompt": SYSTEM_PROMPT, "permission": "deny", "steps": 1}},
+              "provider": {"release_notes": {"npm": "@ai-sdk/openai", "name": "ReleaseNotes",
+                           "options": {"baseURL": base_url, "apiKey": "{env:RELEASE_NOTES_API_KEY}", "timeout": 240000},
+                           "models": {model: {"name": model, "reasoning": True, "temperature": False,
+                                              "options": {"reasoningEffort": "low", "store": False}}}}}}
+    prompt = "Generate release-note JSON from this evidence. No tools are needed.\n" + json.dumps(evidence(commits), ensure_ascii=False)
+    with tempfile.TemporaryDirectory(prefix="amalor-notes-opencode-") as temp:
+        home = Path(temp)
+        env = dict(os.environ, HOME=temp, USERPROFILE=temp, XDG_CONFIG_HOME=str(home / "config"),
+                   XDG_DATA_HOME=str(home / "data"), XDG_CACHE_HOME=str(home / "cache"), XDG_STATE_HOME=str(home / "state"),
+                   OPENCODE_CONFIG_CONTENT=json.dumps(config), OPENCODE_PURE="1", OPENCODE_DISABLE_PROJECT_CONFIG="1",
+                   OPENCODE_DISABLE_EXTERNAL_SKILLS="1", OPENCODE_DISABLE_CLAUDE_CODE_SKILLS="1", RELEASE_NOTES_API_KEY=api_key)
+        command = [executable, "run", "--pure", "--format", "json", "--agent", "release_notes", "--model", "release_notes/" + model]
+        try:
+            result = subprocess.run(command, input=prompt, capture_output=True, encoding="utf-8", errors="replace", env=env, cwd=temp, timeout=240)
+        except subprocess.TimeoutExpired as error:
+            raise ReleaseNotesError("opencode_transport: client timed out") from error
+        if result.returncode:
+            raise ReleaseNotesError("opencode_transport: official client failed (exit " + str(result.returncode) + ")")
+        if len(result.stdout.encode("utf-8")) > RESPONSE_LIMIT:
+            raise ReleaseNotesError("opencode_transport: response exceeds the byte budget")
+        parts = []
+        for line in result.stdout.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+            if event.get("type") == "error":
+                detail = event.get("error")
+                name = detail.get("name", "client error") if isinstance(detail, dict) else "client error"
+                known = name if isinstance(name, str) and re.fullmatch(r"[A-Za-z]{1,80}", name) else "client error"
+                raise ReleaseNotesError("opencode_transport: " + known)
+            part = event.get("part")
+            if event.get("type") == "text" and isinstance(part, dict) and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+        if not parts:
+            raise ReleaseNotesError("opencode_transport: no final assistant text")
+        return validate_notes(decode_notes("\n".join(parts)), commits)
+
+
 def escape_markdown(text):
     return re.sub(r"([\\`*_\[\]<>])", r"\\\1", " ".join(text.split()))
 
@@ -413,9 +475,10 @@ def main():
     if commits and api_key and not args.no_ai:
         try:
             transport = os.environ.get("RELEASE_NOTES_TRANSPORT", "chat").strip().lower()
-            if transport not in ("chat", "codex"):
-                raise ReleaseNotesError("configuration: RELEASE_NOTES_TRANSPORT must be chat or codex")
-            generate = summarize_codex if transport == "codex" else summarize
+            generators = {"chat": summarize, "codex": summarize_codex, "opencode": summarize_opencode}
+            if transport not in generators:
+                raise ReleaseNotesError("configuration: RELEASE_NOTES_TRANSPORT must be chat, codex or opencode")
+            generate = generators[transport]
             notes = generate(commits, os.environ.get("RELEASE_NOTES_API_URL", "https://api.openai.com/v1/chat/completions"),
                              os.environ.get("RELEASE_NOTES_MODEL", "gpt-4.1-mini"), api_key)
             semantic = True
