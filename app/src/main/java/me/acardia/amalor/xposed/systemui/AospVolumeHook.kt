@@ -1,7 +1,10 @@
 package me.acardia.amalor.xposed.systemui
 
+import android.app.Dialog
+import android.content.res.Resources
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import me.acardia.amalor.NativeFeatureOptions
 import java.lang.reflect.Proxy
 import java.util.concurrent.atomic.AtomicBoolean
@@ -10,11 +13,17 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class AospVolumeHook(private val runtime: NativeFeatures) {
     private val bypass = ThreadLocal.withInitial { false }
     private val loader = runtime.loader
+    private val resourcesByName = mutableMapOf<String, Int>()
+    private val motion = AospVolumeMotionHook(runtime)
 
     fun install() {
         val type = runtime.type("com.oplus.systemui.dagger.DaggerOplusReferenceGlobalRootComponent\$OplusReferenceSysUIComponentImpl")
         val method = type.getDeclaredMethod("volumeDialog").apply { isAccessible = true }
         installCallbacks()
+        runCatching { installVolumeSurface() }
+            .onFailure { runtime.error("Native volume surface binding unavailable", it) }
+        runCatching { motion.install() }
+            .onFailure { runtime.error("Native volume expressive motion unavailable", it) }
         runtime.hook("volume:factory", method) { chain ->
             if (bypass.get() == true || !runtime.enabled(NativeFeatureOptions.VOLUME_PANEL)) chain.proceed()
             else {
@@ -28,6 +37,35 @@ internal class AospVolumeHook(private val runtime: NativeFeatures) {
                 replacement ?: chain.proceed()
             }
         }
+    }
+
+    private fun resource(resources: Resources, type: String, name: String): Int =
+        resourcesByName.getOrPut("$type/$name") {
+            // SystemUI builds with the same version number can have different resource indices.
+            resources.getIdentifier(name, type, "com.android.systemui").also {
+                check(it != 0) { "Missing SystemUI $type/$name" }
+            }
+        }
+
+    private fun installVolumeSurface() {
+        val binder = runtime.type("com.android.systemui.volume.dialog.ui.binder.VolumeDialogViewBinder")
+        val bind = binder.getDeclaredMethod("bind", runtime.type("kotlinx.coroutines.CoroutineScope"),
+            Dialog::class.java, Boolean::class.javaPrimitiveType)
+        runtime.hook("volume:sidebar-surface", bind) { chain ->
+            // Main.immediate may start the visibility spring inside bind(), so register first.
+            // The boolean is isVolumeDialogVertical. The horizontal dialog has different constraints.
+            if (runtime.enabled(NativeFeatureOptions.VOLUME_PANEL) && chain.getArg(2) == true) runCatching {
+                val dialog = chain.getArg(1) as Dialog
+                val resources = dialog.context.resources
+                val root = requireNotNull(dialog.findViewById<View>(resource(resources, "id", "volume_dialog")))
+                val background = requireNotNull(dialog.findViewById<View>(resource(resources, "id", "volume_dialog_background")))
+                motion.bind(root, background)
+            }.onFailure { runtime.error("Native volume surface binding failed", it) }
+            chain.proceed()
+        }
+        runtime.module.deoptimize(bind)
+        val caller = runtime.type("com.android.systemui.volume.dialog.VolumeDialog\$onCreate\$1\$invokeSuspend\$\$inlined\$coroutineScopeTraced\$1")
+        runtime.module.deoptimize(caller.getDeclaredMethod("invokeSuspend", Any::class.java))
     }
 
     private fun installCallbacks() {
