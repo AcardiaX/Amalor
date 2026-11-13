@@ -253,18 +253,19 @@ internal class QsTileAppearanceHook(private val r: NativeFeatures) {
         }
     }
 
-    private fun isTileRoot(view: View): Boolean {
-        var owner: Class<*>? = view.javaClass
-        while (owner != null) {
-            if (owner.name.startsWith("com.oplus.systemui.plugins.qs.customize.view.tile.") ||
-                owner.name.startsWith("com.oplus.deviceplugin.sdk.ui.view.separatecardview.") ||
-                owner.name == "com.oplus.systemui.qs.base.tile.OplusQSTileBaseView" ||
-                owner.name == "com.oplus.systemui.qs.base.tile.OplusQSHighlightTileView" ||
-                owner.name == "com.oplus.systemui.qs.slider.detail.widget.QsDetailTileBaseView") return true
-            owner = owner.superclass
+    private val tileRootClasses = object : ClassValue<Boolean>() {
+        override fun computeValue(type: Class<*>): Boolean {
+            var owner: Class<*>? = type
+            while (owner != null) {
+                if (QsAppearanceRules.tileRootClass(owner.name)) return true
+                owner = owner.superclass
+            }
+            return false
         }
-        return false
     }
+
+    // Class ancestry is immutable. View ancestry remains live so recycling/reparenting stays correct.
+    private fun isTileRoot(view: View): Boolean = tileRootClasses.get(view.javaClass)
 
     private fun isTile(view: View): Boolean {
         var current: View? = view

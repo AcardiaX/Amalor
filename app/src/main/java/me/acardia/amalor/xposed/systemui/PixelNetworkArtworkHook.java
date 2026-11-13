@@ -32,6 +32,7 @@ import me.acardia.amalor.xposed.HookLog;
 final class PixelNetworkArtworkHook {
     private static android.content.Context artworkContext;
     private static final LruCache<Long, Object> artworkImages = new LruCache<>(64);
+    private static final LruCache<Long, Bitmap> artworkBitmaps = new LruCache<>(64);
     private static final ClassValue<Method[]> modelAccessors = new ClassValue<>() {
         @Override protected Method[] computeValue(Class<?> type) {
             try { return new Method[]{type.getMethod("getNetworkTypeText")}; }
@@ -109,11 +110,12 @@ final class PixelNetworkArtworkHook {
                         Integer id = iconId(label);
                         if (id == null) return result;
                         TextView view = (TextView) text.get(chain.getThisObject());
-                        Drawable drawable = artworkContext(module, view.getContext()).getDrawable(id);
-                        if (drawable == null) return result;
+                        android.content.Context context = artworkContext(module, view.getContext());
                         if (label.startsWith("TIGO_")) {
                             ImageView target = (ImageView) image.get(chain.getThisObject());
                             if (target == null) return result;
+                            Drawable drawable = context.getDrawable(id);
+                            if (drawable == null) return result;
                             target.setImageDrawable(drawable.mutate());
                         } else {
                             // Native prefix/suffix metric spans would split the same artwork into
@@ -122,8 +124,8 @@ final class PixelNetworkArtworkHook {
                             if (value.length() == 0) return result;
                             // Match Compose's visible-glyph centering, not the vector's unequal
                             // transparent top/bottom margins. Keep the bitmap at its original dp size.
-                            Bitmap centered = rasterizeCentered(drawable);
-                            centered.setDensity(view.getResources().getDisplayMetrics().densityDpi);
+                            Bitmap centered = artworkBitmap(context, id);
+                            if (centered == null) return result;
                             Drawable icon = new BitmapDrawable(view.getResources(), centered);
                             value.setSpan(new ArtworkSpan(icon, NetworkTypeHook.independentLabelPadding(view)), 0, value.length(),
                                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -183,6 +185,24 @@ final class PixelNetworkArtworkHook {
         return artworkContext;
     }
 
+    private static long artworkKey(android.content.Context context, int id) {
+        return ((long) context.getResources().getDisplayMetrics().densityDpi << 32) | (id & 0xffffffffL);
+    }
+
+    private static Bitmap artworkBitmap(android.content.Context context, int id) {
+        long key = artworkKey(context, id);
+        Bitmap bitmap = artworkBitmaps.get(key);
+        if (bitmap == null) {
+            Drawable drawable = context.getDrawable(id);
+            if (drawable == null) return null;
+            bitmap = rasterizeCentered(drawable);
+            bitmap.setDensity(context.getResources().getDisplayMetrics().densityDpi);
+            // Only immutable monochrome pixels are shared. Each View owns its tintable Drawable.
+            artworkBitmaps.put(key, bitmap);
+        }
+        return bitmap;
+    }
+
     private static void hookCompose(XposedModule module, ClassLoader loader) throws Exception {
         String ownerName = "com.android.systemui.statusbar.pipeline.shared.ui.composable.OplusStackedMobileIconLayoutStrategyKt";
         Class<?> owner = loader.loadClass(ownerName);
@@ -228,13 +248,12 @@ final class PixelNetworkArtworkHook {
                     }
                     // The vector is monochrome; Compose applies the live tint separately. Reuse
                     // rasterization/ImageBitmap identity instead of scanning pixels on recomposition.
-                    long cacheKey = ((long) artworkContext.getResources().getDisplayMetrics().densityDpi << 32)
-                            | (id & 0xffffffffL);
+                    long cacheKey = artworkKey(artworkContext, id);
                     Object image = artworkImages.get(cacheKey);
                     if (image == null) {
-                        Drawable drawable = artworkContext.getDrawable(id);
-                        if (drawable == null) return chain.proceed();
-                        image = imageBitmapConstructor.newInstance(rasterizeCentered(drawable));
+                        Bitmap bitmap = artworkBitmap(artworkContext, id);
+                        if (bitmap == null) return chain.proceed();
+                        image = imageBitmapConstructor.newInstance(bitmap);
                         artworkImages.put(cacheKey, image);
                     }
                     Object composer = args[10];
