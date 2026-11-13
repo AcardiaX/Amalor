@@ -1,47 +1,25 @@
-# 自动发布日志
+# 自动发布日志格式
 
-Release 工作流自动读取“上一个正式 Release 的 tag → 本次提交”之间的提交，生成中文在前、英文在后的 Markdown。没有旧 Release 时读取全部非合并提交。
+Release 工作流读取“上一个正式 Release 的 tag → 本次提交”之间的提交，按类型分类并生成 Markdown。没有旧 Release 时读取全部非合并提交。
 
-输出包括 🌟 亮点、📝 更新内容，以及以下分类：
+## 内容格式
 
-- ✨ 新增功能 / New Features
-- ⚡ 优化与改进 / Improvements
-- 🔄 变更 / Changes
-- 🐛 修复 / Fixes
-- 🌐 文档与翻译 / Docs & Translations
+- 简体中文区块在前，English 区块在后。
+- 🌟 亮点 / Highlights：本次提交及各分类数量。
+- 📝 更新内容 / What's Changed：按以下分类列出提交标题。
+  - ✨ 新增功能 / New Features
+  - ⚡ 优化与改进 / Improvements
+  - 🔄 变更 / Changes
+  - 🐛 修复 / Fixes
+  - 🌐 文档与翻译 / Docs & Translations
+- 贡献者从 GitHub noreply 邮箱及 Co-authored-by 信息解析。
+- 完整变更对比链接放在末尾。
 
-同类实现会归并为面向用户的说明，中文与英文描述相同的事实。贡献者从提交中的 GitHub noreply 邮箱及 Co-authored-by 信息解析，完整对比链接放在末尾。
-
-## 一次配置
-
-在仓库 **Settings → Secrets and variables → Actions** 中设置：
-
-| 类型 | 名称 | 用途 |
-| --- | --- | --- |
-| Secret | `RELEASE_NOTES_API_KEY` | 模型接口密钥 |
-| Variable | `RELEASE_NOTES_API_URL` | 完整的 Chat Completions 地址，默认 `https://api.openai.com/v1/chat/completions` |
-| Variable | `RELEASE_NOTES_MODEL` | 模型名称，默认 `gpt-4.1-mini` |
-| Variable | `RELEASE_NOTES_TRANSPORT` | `chat`（默认）为通用 HTTP 接口；`codex` 或 `opencode` 使用相应官方客户端 / Responses |
-
-可使用 OpenAI 或兼容网关。模型需支持 Chat Completions 与 JSON 输出。普通模型使用 `temperature` 和 `max_tokens`；GPT-5/6、o 系列推理模型使用 `max_completion_tokens` 与低推理预算。请求显式关闭流式输出，也可接收网关返回的标准 Chat Completions SSE。密钥只传给日志生成步骤，不写入文件或日志。GitHub 的 `GITHUB_TOKEN` 用于发布与依赖下载，不能代替模型接口密钥。
-
-GitHub Models 已于 2026 年 7 月停用，因此此流程使用可配置接口，而非旧的 GitHub Models 服务。
-
-### AgentRouter
-
-AgentRouter 官方说明了支持的编程客户端范围。若普通 HTTP 请求在 Actions 中收到 HTML，可将 `RELEASE_NOTES_TRANSPORT` 设为 `codex`，沿用已配置的密钥与模型。工作流安装固定版本的官方 Codex CLI，并按其 [Codex 接入文档](https://agentrouter.org/docs/codex.html) 使用 Responses；不会伪装客户端或执行网关返回的网页脚本。
-
-此模式下 `RELEASE_NOTES_API_URL` 可填写 provider Base URL（例如 `https://agentrouter.org/v1`）；已有的 `/v1/chat/completions` 地址也会转换为该 Base URL。客户端只读取预先整理好的提交证据，使用临时配置和只读模式，关闭 shell、子代理等生成工具；最终 JSON 仍通过语言和提交覆盖校验。
-
-若同一令牌与模型在 OpenCode 的 `@ai-sdk/openai` provider 中可用，可使用 `opencode` 模式对齐这一客户端。工作流使用固定版本的官方 CLI，创建临时 Responses provider 和仅输出日志的 primary agent，拒绝工具执行、关闭共享与外部插件；不会更改用户正在运行的 OpenCode 配置。每次预览/发布都会启动新的临时客户端配置。
-
-自定义模型显式声明日志调用预算：上下文 64K、输出 8K。未声明 `limit` 时，OpenCode 会将未知模型的上下文和输出上限解析为 0，不能仅复制 provider 的地址和模型名。
+标题和分类标签使用中英文，条目保留原始提交文案；不会自动归纳或翻译。此流程只使用 Git 和 Python 标准库，不需要模型接口配置。
 
 ## 以后怎么写
 
-**不需要手写 changelog。** 正常提交代码，运行 Release 工作流并填写版本名即可。
-
-提交标题沿用 Conventional Commits：
+正常提交代码，运行 Release 工作流并填写版本名即可。提交标题沿用 Conventional Commits，日志会去掉类型前缀并按类型分类：
 
 ```text
 feat: add wallpaper color optimization
@@ -50,29 +28,12 @@ perf: reuse rasterized Pixel network artwork
 docs: update configuration instructions
 ```
 
-标题说清改了什么；若影响默认值、支持范围或操作方式，在 commit body 中补充事实，例如：
-
-```text
-Use ColorSpec 2025 for the COUI/NX wallpaper palette.
-Disabled by default. Restart Wallpaper & personalization after enabling it.
-```
-
-生成器读取提交标题、正文和有限长度的代码差异，合并重复事项并翻译成双语。只传入已提交的 Git 内容，未提交的本地测试、分析及构建产物不会参与生成。大范围差异会截断，重要的默认值和兼容性说明最好写入 commit body。
-
-模型输出必须关联到本次范围内的真实提交，覆盖全部提交，并通过格式检查。没有密钥、接口不可用、输出截断或校验失败时，自动回退到带中文标题和 Emoji 的分类提交记录，明确标注未做语义归纳或翻译；不会因此阻断 Release 构建。
-
-生成结果写入 `release-notes.md`、Actions 运行摘要和已有的 Release 草稿。
-
-## 先验证接口
-
-在 Release 工作流中勾选 `notes_only`，即可只生成日志，上传 Markdown 并验证真正的双语输出；APK 构建、签名和 Release 创建步骤会跳过。纯日志模式在接口或输出校验失败时明确失败，避免将回退记录当成翻译成功。
-
-失败提示区分 `configuration`（配置）、`api_http`（HTTP 状态）、`api_response`（接口响应格式）、`model_content`（模型正文 JSON）和 `notes_validation`（条目/语言/提交关联）。日志不会打印响应正文或密钥；普通 Release 的回退文本也会注明这一原因。
+生成结果写入 `release-notes.md`、Actions 运行摘要和 Release 草稿。草稿中可继续编辑详细说明。
 
 ## 本地预览
 
 ```powershell
-python .github/scripts/generate_release_notes.py --base v1.2.0 --tag v1.3.0 --no-ai
+python .github/scripts/generate_release_notes.py --base v1.2.0 --tag v1.3.0
 ```
 
-去掉 `--no-ai`，并在环境变量中配置上述接口参数，即可预览模型总结。这里的 `--tag` 只用于日志链接，不会创建 tag 或 Release。
+`--tag` 只用于日志链接，不会创建 tag 或 Release。

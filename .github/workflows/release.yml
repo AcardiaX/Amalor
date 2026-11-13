@@ -7,11 +7,6 @@ on:
         description: "Release version without the v prefix, for example 1.0.0"
         required: true
         type: string
-      notes_only:
-        description: "Only generate and validate bilingual notes"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -28,25 +23,21 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK
-        if: ${{ !inputs.notes_only }}
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "25"
 
       - name: Set up Gradle
-        if: ${{ !inputs.notes_only }}
         uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
           build-scan-publish: false
 
       - name: Grant execute permission for Gradle
-        if: ${{ !inputs.notes_only }}
         run: chmod +x ./gradlew
 
       - name: Prepare release signing
-        if: ${{ !inputs.notes_only }}
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
@@ -67,14 +58,12 @@ jobs:
           EOF
 
       - name: Build release APK
-        if: ${{ !inputs.notes_only }}
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :app:assembleRelease -PVERSION_NAME="${{ inputs.version_name }}" --no-daemon
 
       - name: Upload APK artifact
-        if: ${{ !inputs.notes_only }}
         uses: actions/upload-artifact@v7
         with:
           name: Amalor-v${{ inputs.version_name }}-apk
@@ -95,36 +84,14 @@ jobs:
             | .[0].tagName // ""')"
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Set up official Codex client
-        if: ${{ vars.RELEASE_NOTES_TRANSPORT == 'codex' }}
-        run: npm install --global @openai/codex@0.168.0
-
-      - name: Set up official OpenCode client
-        if: ${{ vars.RELEASE_NOTES_TRANSPORT == 'opencode' }}
-        run: npm install --global opencode-ai@1.19.5
-
-      - name: Generate Chinese-first bilingual release notes
-        timeout-minutes: 5
+      - name: Format Chinese-first release notes
         env:
           CURRENT_TAG: v${{ inputs.version_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PREVIOUS_TAG: ${{ steps.release_meta.outputs.previous_tag }}
-          RELEASE_NOTES_API_KEY: ${{ secrets.RELEASE_NOTES_API_KEY }}
-          RELEASE_NOTES_API_URL: ${{ vars.RELEASE_NOTES_API_URL || 'https://api.openai.com/v1/chat/completions' }}
-          RELEASE_NOTES_MODEL: ${{ vars.RELEASE_NOTES_MODEL || 'gpt-4.1-mini' }}
-          RELEASE_NOTES_TRANSPORT: ${{ vars.RELEASE_NOTES_TRANSPORT || 'chat' }}
-        run: python3 .github/scripts/generate_release_notes.py ${{ inputs.notes_only && '--require-ai' || '' }}
-
-      - name: Upload release notes
-        uses: actions/upload-artifact@v7
-        with:
-          name: Amalor-notes-v${{ inputs.version_name }}
-          path: release-notes.md
-          if-no-files-found: error
-          retention-days: 15
+        run: python3 .github/scripts/generate_release_notes.py
 
       - name: Create GitHub Release
-        if: ${{ !inputs.notes_only }}
         uses: softprops/action-gh-release@v3
         with:
           name: ${{ inputs.version_name }}
