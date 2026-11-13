@@ -355,22 +355,26 @@ def summarize_opencode(commits, api_url, model, api_key):
               "agent": {"release_notes": {"description": "Generate bilingual release notes from supplied Git evidence",
                          "mode": "primary", "prompt": SYSTEM_PROMPT, "permission": "deny", "steps": 1}},
               "provider": {"release_notes": {"npm": "@ai-sdk/openai", "name": "ReleaseNotes",
-                           "options": {"baseURL": base_url, "apiKey": "{env:RELEASE_NOTES_API_KEY}", "timeout": 240000},
+                            "options": {"baseURL": base_url, "apiKey": "{env:RELEASE_NOTES_API_KEY}", "timeout": 180000,
+                                        "headerTimeout": 60000, "chunkTimeout": 60000},
                            "models": {model: {"name": model, "reasoning": True, "temperature": False,
                                               "options": {"reasoningEffort": "low", "store": False}}}}}}
     prompt = "Generate release-note JSON from this evidence. No tools are needed.\n" + json.dumps(evidence(commits), ensure_ascii=False)
     with tempfile.TemporaryDirectory(prefix="amalor-notes-opencode-") as temp:
         home = Path(temp)
-        env = dict(os.environ, HOME=temp, USERPROFILE=temp, XDG_CONFIG_HOME=str(home / "config"),
+        env = dict(os.environ, HOME=temp, USERPROFILE=temp, PWD=temp, XDG_CONFIG_HOME=str(home / "config"),
                    XDG_DATA_HOME=str(home / "data"), XDG_CACHE_HOME=str(home / "cache"), XDG_STATE_HOME=str(home / "state"),
                    OPENCODE_CONFIG_CONTENT=json.dumps(config), OPENCODE_PURE="1", OPENCODE_DISABLE_PROJECT_CONFIG="1",
                    OPENCODE_DISABLE_EXTERNAL_SKILLS="1", OPENCODE_DISABLE_CLAUDE_CODE_SKILLS="1", RELEASE_NOTES_API_KEY=api_key)
-        command = [executable, "run", "--pure", "--format", "json", "--agent", "release_notes", "--model", "release_notes/" + model]
+        command = [executable, "run", "--pure", "--format", "json", "--agent", "release_notes", "--model", "release_notes/" + model,
+                   "--dir", temp, "--title", "Release notes", "--print-logs", "--log-level", "INFO"]
         try:
             result = subprocess.run(command, input=prompt, capture_output=True, encoding="utf-8", errors="replace", env=env, cwd=temp, timeout=240)
         except subprocess.TimeoutExpired as error:
+            opencode_diagnostic(error.stdout, error.stderr)
             raise ReleaseNotesError("opencode_transport: client timed out") from error
         if result.returncode:
+            opencode_diagnostic(result.stdout, result.stderr)
             raise ReleaseNotesError("opencode_transport: official client failed (exit " + str(result.returncode) + ")")
         if len(result.stdout.encode("utf-8")) > RESPONSE_LIMIT:
             raise ReleaseNotesError("opencode_transport: response exceeds the byte budget")
@@ -392,7 +396,38 @@ def summarize_opencode(commits, api_url, model, api_key):
                 parts.append(part["text"])
         if not parts:
             raise ReleaseNotesError("opencode_transport: no final assistant text")
-        return validate_notes(decode_notes("\n".join(parts)), commits)
+    return validate_notes(decode_notes("\n".join(parts)), commits)
+
+
+def opencode_diagnostic(stdout, stderr):
+    """Report lifecycle/error metadata without dumping client transcripts or request data."""
+    def text(value):
+        return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value or ""
+    stdout, stderr = text(stdout), text(stderr)
+    counts = Counter()
+    for line in stdout.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        kind = event.get("type")
+        if kind in ("step_start", "step_finish", "text", "error", "tool_use"):
+            counts[kind] += 1
+        error = event.get("error")
+        if isinstance(error, dict):
+            name = error.get("name")
+            if isinstance(name, str) and re.fullmatch(r"[A-Za-z]{1,80}", name):
+                print("OpenCode error type: " + name, file=sys.stderr)
+            data = error.get("data")
+            if isinstance(data, dict) and isinstance(data.get("statusCode"), int):
+                print("OpenCode HTTP status: " + str(data["statusCode"]), file=sys.stderr)
+    labels = [label for marker, label in (("llm", "model request started"), ("ConfigInvalidError", "invalid configuration"),
+              ("ENOTFOUND", "DNS failure"), ("ECONNRESET", "connection reset"), ("certificate", "certificate error"),
+              ("TimeoutError", "request timeout"), ("APICallError", "API call failed"),
+              ("<!DOCTYPE", "HTML response")) if marker.lower() in stderr.lower()]
+    print("OpenCode lifecycle: " + str(dict(counts)) + ("; " + ", ".join(labels) if labels else ""), file=sys.stderr)
 
 
 def escape_markdown(text):
