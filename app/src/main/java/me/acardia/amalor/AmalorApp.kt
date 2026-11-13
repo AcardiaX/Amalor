@@ -59,6 +59,7 @@ import me.acardia.amalor.ui.config.WeTypeScreen
 import me.acardia.amalor.ui.config.WallpaperColorsScreen
 import me.acardia.amalor.ui.config.AppThemeScreen
 import me.acardia.amalor.ui.navigation.AmalorRoute
+import me.acardia.amalor.ui.navigation.navigateTo
 import me.acardia.amalor.ui.settings.SettingsScreen
 import me.acardia.amalor.ui.about.AboutScreen
 import me.acardia.amalor.ui.about.OpenSourceLicenseScreen
@@ -316,12 +317,12 @@ fun AmalorApp(
                          Page.HOME -> HomeScreen(outerPadding = mainPadding, isActive = xposedService != null, isRootAuthorized = rootState?.authorized == true, isModuleInstalled = rootState?.moduleInstalled == true, moduleVersion = rootState?.moduleVersion, activePrivilegeSource = rootState?.source, deviceName = rootState?.deviceName ?: "")
                         Page.CONFIG -> ConfigScreen(
                             outerPadding = mainPadding,
-                             onOpenSystemUi = { navigator.push(AmalorRoute.SystemUiStyle) },
-                             onOpenLauncher = { navigator.push(AmalorRoute.Launcher) },
-                             onOpenWeType = { navigator.push(AmalorRoute.WeType) },
-                             onOpenWallpaperColors = { navigator.push(AmalorRoute.WallpaperColors) },
+                              onOpenSystemUi = { navigator.navigateTo(AmalorRoute.SystemUiStyle) },
+                              onOpenLauncher = { navigator.navigateTo(AmalorRoute.Launcher) },
+                              onOpenWeType = { navigator.navigateTo(AmalorRoute.WeType) },
+                              onOpenWallpaperColors = { navigator.navigateTo(AmalorRoute.WallpaperColors) },
                              onOpenAppTheme = { target ->
-                                 navigator.push(if (target == AppThemeTarget.SETTINGS) AmalorRoute.SettingsAppTheme else AmalorRoute.PermissionsAppTheme)
+                                  navigator.navigateTo(if (target == AppThemeTarget.SETTINGS) AmalorRoute.SettingsAppTheme else AmalorRoute.PermissionsAppTheme)
                              },
                         )
                          Page.SETTINGS -> SettingsScreen(
@@ -331,7 +332,7 @@ fun AmalorApp(
                              onLogLevelChange = { value ->
                                  if (saveNetworkOption { putInt(LogOptions.KEY, value) }) logLevel = value
                              },
-                             onOpenAbout = { navigator.push(AmalorRoute.About) },
+                              onOpenAbout = { navigator.navigateTo(AmalorRoute.About) },
                          )
                     }
                             }
@@ -341,8 +342,8 @@ fun AmalorApp(
             }
             entry<AmalorRoute.Launcher>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 me.acardia.amalor.ui.config.LauncherScreen(
-                    onOpenPages = { navigator.push(AmalorRoute.LauncherPages) },
-                    onOpenIcons = { navigator.push(AmalorRoute.LauncherIcons) },
+                    onOpenPages = { navigator.navigateTo(AmalorRoute.LauncherPages) },
+                    onOpenIcons = { navigator.navigateTo(AmalorRoute.LauncherIcons) },
                     onBack = { navigator.pop() },
                 )
             }
@@ -448,9 +449,9 @@ fun AmalorApp(
             entry<AmalorRoute.SystemUiStyle>(swipeDismiss = NavSwipeDirection.LeftToRight) {
                 SystemUiStyleScreen(
                     onBack = { navigator.pop() },
-                    onOpenStatusBar = { navigator.push(AmalorRoute.StatusBar) },
-                    onOpenControlCenter = { navigator.push(AmalorRoute.ControlCenter) },
-                    onOpenOther = { navigator.push(AmalorRoute.SystemUiOther) },
+                    onOpenStatusBar = { navigator.navigateTo(AmalorRoute.StatusBar) },
+                    onOpenControlCenter = { navigator.navigateTo(AmalorRoute.ControlCenter) },
+                    onOpenOther = { navigator.navigateTo(AmalorRoute.SystemUiOther) },
                     materialEnabled = nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true,
                     onMaterialChange = { value ->
                         if ((nativeFeatures[NativeFeatureOptions.QS_TILE_NATIVE_APPEARANCE] == true) != value &&
@@ -498,7 +499,7 @@ fun AmalorApp(
                         if (saveNetworkOption { putBoolean(PackageUpdateOptions.ENABLED, value) }) packageUpdateM3e = value
                     },
                     onBack = { navigator.pop() },
-                    onOpenBackGesture = { navigator.push(AmalorRoute.BackGesture) },
+                    onOpenBackGesture = { navigator.navigateTo(AmalorRoute.BackGesture) },
                 )
             }
             entry<AmalorRoute.StatusBar>(swipeDismiss = NavSwipeDirection.LeftToRight) {
@@ -537,7 +538,7 @@ fun AmalorApp(
                     onBack = { navigator.pop() },
                     canRestartSystemUi = rootState?.authorized == true,
                     onRestartSystemUi = ::restartSystemUi,
-                    onOpenNetworkType = { navigator.push(AmalorRoute.NetworkTypeIcon) },
+                    onOpenNetworkType = { navigator.navigateTo(AmalorRoute.NetworkTypeIcon) },
                     onModeChange = { mode ->
                         if (saveNetworkOption { putInt(STATUS_BAR_MODE_KEY, mode) }) statusBarMode = mode
                     },
@@ -564,7 +565,7 @@ fun AmalorApp(
                     },
                 )
             }
-            entry<AmalorRoute.About>(swipeDismiss = NavSwipeDirection.LeftToRight) { AboutScreen(onBack = { navigator.pop() }, onOpenLicenses = { navigator.push(AmalorRoute.Licenses) }) }
+            entry<AmalorRoute.About>(swipeDismiss = NavSwipeDirection.LeftToRight) { AboutScreen(onBack = { navigator.pop() }, onOpenLicenses = { navigator.navigateTo(AmalorRoute.Licenses) }) }
             entry<AmalorRoute.Licenses>(swipeDismiss = NavSwipeDirection.LeftToRight) { OpenSourceLicenseScreen(onBack = { navigator.pop() }) }
         }
 }
