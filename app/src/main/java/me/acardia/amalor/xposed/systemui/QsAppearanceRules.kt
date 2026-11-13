@@ -19,16 +19,34 @@ internal object QsAppearanceRules {
     fun qsReopened(previousFraction: Float, currentFraction: Float): Boolean =
         previousFraction <= 0f && currentFraction > 0f
 
-    fun secondaryDetailText(resourceName: String): Boolean = resourceName in setOf(
+    fun secondaryDetailText(resourceName: String): Boolean = when (resourceName) {
         "summary", "text2", "detail_items_summary", "detail_items_summary2", "detail_hint_textview", "qs_hint_textview",
         "subtitle", "description", "secondary_text", "empty", "frequency_tag",
         "oplus_media_panel_container_text", "oplus_media_panel_container_default_tip",
-        "oplus_media_panel_container_time", "oplus_media_panel_container_all_time", "oplus_media_panel_output_switch_text",
-    ) || resourceName.endsWith("_summary") || resourceName.endsWith("_summary2") ||
-        resourceName.endsWith("_subtitle") || resourceName.endsWith("_description")
+        "oplus_media_panel_container_time", "oplus_media_panel_container_all_time", "oplus_media_panel_output_switch_text" -> true
+        else -> resourceName.endsWith("_summary") || resourceName.endsWith("_summary2") ||
+            resourceName.endsWith("_subtitle") || resourceName.endsWith("_description")
+    }
+
+    fun tileRootClass(className: String): Boolean = when (className) {
+        "com.oplus.systemui.qs.base.tile.OplusQSTileBaseView",
+        "com.oplus.systemui.qs.base.tile.OplusQSHighlightTileView",
+        "com.oplus.systemui.qs.slider.detail.widget.QsDetailTileBaseView" -> true
+        else -> className.startsWith("com.oplus.systemui.plugins.qs.customize.view.tile.") ||
+            className.startsWith("com.oplus.deviceplugin.sdk.ui.view.separatecardview.")
+    }
 
     fun backgroundAlpha(roleColor: Int, drawableAlpha: Int): Int =
         (roleColor ushr 24) * drawableAlpha.coerceIn(0, 255) / 255
+
+    /** Only device-space chrome is recolored; device artwork and battery graphics are content. */
+    fun secondaryDeviceSpaceForeground(resourceName: String): Boolean? = when (resourceName) {
+        "no_entrance_title", "rectangle_entrance_title", "rectangle_panel_title",
+        "no_device_space_icon", "rectangle_entrance_icon", "square_entrance_icon" -> false
+        "no_entrance_title_dec", "rectangle_entrance_title_dec", "rectangle_main_status",
+        "rectangle_status_image" -> true
+        else -> null
+    }
 
     fun mediaDetailFraction(start: Float, expanding: Boolean, progress: Float): Float {
         val from = start.coerceIn(0f, 1f)
@@ -42,10 +60,13 @@ internal object QsAppearanceRules {
 
     fun largeTile(columns: Int, rows: Int): Boolean = columns > 1 || rows > 1
 
-    fun primaryHeaderText(resourceName: String): Boolean = resourceName in setOf(
+    fun primaryHeaderText(resourceName: String): Boolean = when (resourceName) {
         "clock", "clock_for_fake", "qs_footer_clock", "oplus_qs_clock",
-        "date", "oplus_date", "oplus_qs_date",
-    )
+        "date", "oplus_date", "oplus_qs_date" -> true
+        else -> false
+    }
+
+    fun clockDateColoring(materialEnabled: Boolean, requested: Boolean): Boolean = materialEnabled && requested
 
     fun inlineThemeFlags(dark: Boolean): Map<String, Boolean> = mapOf(
         "key_is_dark_theme_color" to dark,
@@ -62,12 +83,27 @@ internal object QsAppearanceRules {
         else -> null
     }
 
-    fun roundNotificationControl(className: String): Boolean = className in setOf(
+    fun roundNotificationControl(className: String): Boolean = when (className) {
         "com.oplus.systemui.qs.OplusQsFooterSettingsSpotLightImageView",
-        "com.oplus.systemui.notification.clearall.OplusClearAllButton",
-    )
+        "com.oplus.systemui.notification.clearall.OplusClearAllButton" -> true
+        else -> false
+    }
 
     fun unavailableTile(state: Int?, unavailableFlag: Boolean, disabledByPolicy: Boolean): Boolean =
         disabledByPolicy || (state?.let { it == 0 || it == 101 } ?: unavailableFlag)
 
+}
+
+/** Keep the full native ColorStateList, including updates received while a role is applied. */
+internal class QsHeaderTextColorState<T : Any>(initial: T) {
+    var nativeColor: T = initial
+        private set
+    private var applied: T? = null
+
+    fun observe(current: T) {
+        if (current !== applied) nativeColor = current
+    }
+
+    fun recordNative(color: T) { nativeColor = color }
+    fun markApplied(color: T?) { applied = color }
 }

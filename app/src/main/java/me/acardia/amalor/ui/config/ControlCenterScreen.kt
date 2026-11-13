@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import me.acardia.amalor.R
 import me.acardia.amalor.ui.component.SegmentedColumn
@@ -22,6 +23,9 @@ import me.acardia.amalor.ui.component.SwitchWidget
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ControlCenterScreen(
+    materialEnabled: Boolean,
+    clockDateColors: Boolean,
+    onClockDateColorsChange: (Boolean) -> Unit,
     brightnessIconClipBypass: Boolean,
     onBrightnessIconClipBypassChange: (Boolean) -> Unit,
     tileAnimationsDisabled: Boolean,
@@ -38,7 +42,7 @@ fun ControlCenterScreen(
         topBar = {
             LargeFlexibleTopAppBar(
                 windowInsets = TopAppBarDefaults.windowInsets.add(WindowInsets(left = 12.dp)),
-                title = { Text(stringResource(R.string.config_control_center)) },
+                title = { Text(stringResource(R.string.config_notification_control_center)) },
                 navigationIcon = { ConfigBackButton(onBack) },
                 actions = { RestartSystemUiAction(canRestartSystemUi) { showRestartDialog = true } },
                 scrollBehavior = scroll,
@@ -49,14 +53,27 @@ fun ControlCenterScreen(
             )
         },
     ) { padding ->
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding).padding(horizontal = 16.dp)) {
-            SegmentedColumn(title = stringResource(R.string.config_tile_icons), modifier = Modifier.padding(top = 8.dp), contentPadding = PaddingValues(0.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(padding)) {
+            SegmentedColumn(title = stringResource(R.string.config_notification_center)) {
+                item { shape ->
+                    SwitchWidget(
+                        title = stringResource(R.string.notification_clock_date_colors_title),
+                        description = stringResource(R.string.notification_clock_date_colors_desc),
+                        shape = shape,
+                        icon = painterResource(R.drawable.ic_clock),
+                        enabled = materialEnabled,
+                        checked = clockDateColors,
+                        onCheckedChange = onClockDateColorsChange,
+                    )
+                }
+            }
+            SegmentedColumn(title = stringResource(R.string.config_control_center)) {
                 item { shape ->
                     SwitchWidget(
                         title = stringResource(R.string.config_auto_brightness_icon_clip_bypass),
                         description = stringResource(R.string.config_auto_brightness_icon_clip_bypass_desc),
                         shape = shape,
-                        icon = androidx.compose.ui.res.painterResource(R.drawable.ic_brightness),
+                        icon = painterResource(R.drawable.ic_brightness),
                         checked = brightnessIconClipBypass,
                         onCheckedChange = onBrightnessIconClipBypassChange,
                     )

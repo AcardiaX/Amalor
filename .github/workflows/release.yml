@@ -84,59 +84,12 @@ jobs:
             | .[0].tagName // ""')"
           echo "previous_tag=$previous_tag" >> "$GITHUB_OUTPUT"
 
-      - name: Generate release notes
+      - name: Format Chinese-first release notes
         env:
           CURRENT_TAG: v${{ inputs.version_name }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           PREVIOUS_TAG: ${{ steps.release_meta.outputs.previous_tag }}
-        run: |
-          set -euo pipefail
-
-          if [ -n "$PREVIOUS_TAG" ]; then
-            LOG_RANGE=("$PREVIOUS_TAG..HEAD")
-          else
-            LOG_RANGE=()
-          fi
-
-          write_category() {
-            local category="$1"
-            local found=0
-
-            while IFS=$'\t' read -r subject hash; do
-              [ -n "$subject" ] || continue
-              prefix="${subject%%:*}"
-              prefix="${prefix%%(*}"
-              case "$prefix" in
-                feat|feature) commit_category="features" ;;
-                perf|refactor) commit_category="improvements" ;;
-                fix|bugfix) commit_category="fixes" ;;
-                *) commit_category="changes" ;;
-              esac
-              if [ "$commit_category" = "$category" ]; then
-                echo "- ${subject} (\`${hash}\`)"
-                found=1
-              fi
-            done < <(git log --no-merges --format='%s%x09%h' "${LOG_RANGE[@]}")
-
-            [ "$found" -eq 1 ] || echo "- 无 / None"
-            echo
-          }
-
-          {
-            echo "## ✨ 新增 / Features"
-            write_category "features"
-            echo "## ⚡ 优化 / Improvements"
-            write_category "improvements"
-            echo "## 🔄 变更 / Changes"
-            write_category "changes"
-            echo "## 🐛 修复 / Fixes"
-            write_category "fixes"
-            if [ -n "$PREVIOUS_TAG" ]; then
-              echo "[完整变更 / Full changelog](https://github.com/${GITHUB_REPOSITORY}/compare/${PREVIOUS_TAG}...${CURRENT_TAG})"
-            else
-              echo "[提交记录 / Commit history](https://github.com/${GITHUB_REPOSITORY}/commits/${CURRENT_TAG})"
-            fi
-          } > release-notes.md
+        run: python3 .github/scripts/generate_release_notes.py
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

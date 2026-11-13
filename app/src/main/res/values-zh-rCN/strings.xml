@@ -1,4 +1,18 @@
 <resources>
+    <!-- App-defined COUI colors -->
+    <string name="config_settings_app">设置</string>
+    <string name="config_permission_manager">权限管理</string>
+    <string name="app_theme_group">图标</string>
+    <string name="app_theme_own_icon">不跟随系统主题色</string>
+    <string name="app_theme_own_icon_desc">阻止系统覆盖图标与配色</string>
+    <string name="restart_settings_app">重启 设置？</string>
+    <string name="restart_permission_manager">重启 权限管理？</string>
+    <!-- Wallpaper & personalization -->
+    <string name="config_uxdesign">壁纸与个性化</string>
+    <string name="wallpaper_colors_group">静态取色</string>
+    <string name="wallpaper_colors_2025_title">优化取色方案</string>
+    <string name="wallpaper_colors_2025_desc">更改为 Spec 2025 规格</string>
+    <string name="restart_uxdesign">重启 壁纸与个性化？</string>
     <!-- WeType keyboard -->
     <string name="config_wetype">微信输入法</string>
     <string name="config_font_group">字体</string>
@@ -58,7 +72,6 @@
 
     <!-- Status bar: battery and tile icons -->
     <string name="config_battery_icon">电池图标</string>
-    <string name="config_tile_icons">磁贴图标</string>
     <string name="config_auto_brightness_icon_clip_bypass">优化自动亮度图标</string>
     <string name="config_auto_brightness_icon_clip_bypass_desc">阻止裁剪自动亮度图标</string>
     <string name="config_battery_level_display">规范电量显示</string>
@@ -78,7 +91,7 @@
     <string name="module_inactive">未激活</string>
     <string name="module_inactive_summary">请在 LSPosed 中启用模块后使用</string>
     <string name="module_active">已激活</string>
-    <string name="myfc_status">MYFC 状态</string>
+    <string name="myfc_status">MYFC 版本</string>
     <string name="app_name">Amalor</string>
     <string name="app_description">为 ColorOS 17 提供一些美味的功能 😋</string>
     
@@ -131,7 +144,11 @@
     <!-- Config -->
     <string name="config_apps_group">应用</string>
     <string name="config_system_ui">系统界面</string>
+    <string name="config_notification_control_center">通知与控制中心</string>
+    <string name="config_notification_center">通知中心</string>
     <string name="config_control_center">控制中心</string>
+    <string name="notification_clock_date_colors_title">时钟与日期取色</string>
+    <string name="notification_clock_date_colors_desc">时钟与日期跟随壁纸取色</string>
     <string name="config_disable_tile_icon_animation">禁用图标动画</string>
     <string name="config_disable_tile_icon_animation_desc">禁用磁贴图标的 Lottie 动画</string>
     <string name="config_system_ui_package">com.android.systemui</string>

@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.rememberTopAppBarState
 import me.acardia.amalor.R
+import me.acardia.amalor.AppThemeTarget
 import me.acardia.amalor.WeTypeOptions
+import me.acardia.amalor.WallpaperColorOptions
 import me.acardia.amalor.ui.component.BaseWidget
 import me.acardia.amalor.ui.component.SegmentedColumn
 
@@ -31,6 +33,8 @@ fun ConfigScreen(
     onOpenSystemUi: () -> Unit = {},
     onOpenLauncher: () -> Unit = {},
     onOpenWeType: () -> Unit = {},
+    onOpenWallpaperColors: () -> Unit = {},
+    onOpenAppTheme: (AppThemeTarget) -> Unit = {},
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     Scaffold(
@@ -49,6 +53,9 @@ fun ConfigScreen(
                 SegmentedColumn(title = stringResource(R.string.config_apps_group)) {
                     item { shape -> BaseWidget(title = stringResource(R.string.config_system_ui), shape = shape, description = stringResource(R.string.config_system_ui_package), icon = painterResource(R.drawable.ic_systemui), onClick = onOpenSystemUi) }
                     item { shape -> BaseWidget(title = stringResource(R.string.config_launcher), shape = shape, description = "com.android.launcher", icon = painterResource(R.drawable.ic_home), onClick = onOpenLauncher) }
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_uxdesign), shape = shape, description = WallpaperColorOptions.PACKAGE_NAME, icon = painterResource(R.drawable.ic_uxdesign), onClick = onOpenWallpaperColors) }
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_settings_app), shape = shape, description = AppThemeTarget.SETTINGS.packageName, icon = painterResource(R.drawable.ic_settings), onClick = { onOpenAppTheme(AppThemeTarget.SETTINGS) }) }
+                    item { shape -> BaseWidget(title = stringResource(R.string.config_permission_manager), shape = shape, description = AppThemeTarget.PERMISSIONS.packageName, icon = painterResource(R.drawable.ic_security), onClick = { onOpenAppTheme(AppThemeTarget.PERMISSIONS) }) }
                     item { shape -> BaseWidget(title = stringResource(R.string.config_wetype), shape = shape, description = WeTypeOptions.PACKAGE_NAME, icon = painterResource(R.drawable.ic_keyboard), onClick = onOpenWeType) }
                 }
             }

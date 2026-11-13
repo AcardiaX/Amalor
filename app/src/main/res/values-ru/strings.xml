@@ -1,4 +1,18 @@
 <resources>
+    <!-- App-defined COUI colors -->
+    <string name="config_settings_app">Настройки</string>
+    <string name="config_permission_manager">Управление разрешениями</string>
+    <string name="app_theme_group">Значки</string>
+    <string name="app_theme_own_icon">Не следовать цветам системной темы</string>
+    <string name="app_theme_own_icon_desc">Не позволять системе переопределять значки и цвета</string>
+    <string name="restart_settings_app">Перезапустить «Настройки»?</string>
+    <string name="restart_permission_manager">Перезапустить управление разрешениями?</string>
+    <!-- Wallpaper & personalization -->
+    <string name="config_uxdesign">Обои и персонализация</string>
+    <string name="wallpaper_colors_group">Цвета статичных обоев</string>
+    <string name="wallpaper_colors_2025_title">Оптимизировать цветовую схему</string>
+    <string name="wallpaper_colors_2025_desc">Использовать спецификацию 2025 для палитры статичных обоев</string>
+    <string name="restart_uxdesign">Перезапустить «Обои и персонализация»?</string>
     <!-- WeType keyboard -->
     <string name="config_wetype">WeType</string>
     <string name="config_font_group">Шрифт</string>
@@ -49,7 +63,6 @@
     <string name="config_native_clipboard_desc">Принудительно включить нативный буфер обмена</string>
     <!-- Строка состояния: батарея -->
     <string name="config_battery_icon">Значок батареи</string>
-    <string name="config_tile_icons">Значки плиток</string>
     <string name="config_auto_brightness_icon_clip_bypass">Оптимизировать значок автояркости</string>
     <string name="config_auto_brightness_icon_clip_bypass_desc">Не обрезать значок автояркости</string>
     <string name="config_battery_level_display">Корректное отображение заряда</string>
@@ -105,6 +118,10 @@
     <string name="config_apps_group">Приложения</string>
     <string name="config_system_ui">Системный интерфейс</string>
     <string name="config_control_center">Центр управления</string>
+    <string name="config_notification_control_center">Уведомления и центр управления</string>
+    <string name="config_notification_center">Центр уведомлений</string>
+    <string name="notification_clock_date_colors_title">Цвет часов и даты</string>
+    <string name="notification_clock_date_colors_desc">Цвет часов и даты соответствует палитре обоев</string>
     <string name="config_disable_tile_icon_animation">Отключить анимацию значков</string>
     <string name="config_disable_tile_icon_animation_desc">Отключить Lottie-анимации значков плиток</string>
     <string name="config_system_ui_package">com.android.systemui</string>

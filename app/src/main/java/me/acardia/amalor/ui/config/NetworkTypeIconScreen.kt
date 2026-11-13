@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import me.acardia.amalor.R
 import me.acardia.amalor.NetworkTypeOptions
 import me.acardia.amalor.ui.component.BaseWidget
-import me.acardia.amalor.ui.component.GroupedDropdownMenuPopup
+import me.acardia.amalor.ui.component.SelectionDialog
 import me.acardia.amalor.ui.component.SwitchWidget
 import me.acardia.amalor.ui.component.ExpandableContent
 import me.acardia.amalor.ui.component.rememberExpandableItemShape
@@ -101,17 +101,6 @@ fun NetworkTypeIconScreen(
                         enabled = enabled && checked,
                         icon = androidx.compose.ui.res.painterResource(R.drawable.ic_custom_font),
                         onClick = { fontMenuExpanded = true },
-                        foreContent = {
-                            GroupedDropdownMenuPopup(fontMenuExpanded, { fontMenuExpanded = false }, listOf(fontOptions.size)) { _, index, itemShapes ->
-                                androidx.compose.material3.SelectableDropdownMenuItem(
-                                    selected = index == font,
-                                    onClick = { onFontChange(index); fontMenuExpanded = false },
-                                    text = { Text(fontOptions[index]) },
-                                    enabled = true,
-                                    shapes = itemShapes,
-                                )
-                            }
-                        },
                     )
                 }
                 item(animatedVisibility = boldEnabled) { shape ->
@@ -119,6 +108,15 @@ fun NetworkTypeIconScreen(
                 }
             }
         }
+    }
+    if (fontMenuExpanded && enabled && checked) {
+        SelectionDialog(
+            title = stringResource(R.string.config_font_style),
+            values = fontOptions,
+            selected = font,
+            onDismiss = { fontMenuExpanded = false },
+            onSelect = onFontChange,
+        )
     }
     if (showRestartDialog) {
         RestartSystemUiDialog(onDismiss = { showRestartDialog = false }, onRestart = onRestartSystemUi)

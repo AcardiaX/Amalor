@@ -100,7 +100,7 @@ fun SystemUiStyleScreen(
             SegmentedColumn(title = stringResource(R.string.config), modifier = Modifier.padding(top = 8.dp), contentPadding = PaddingValues(0.dp)) {
                 item { shape ->
                     BaseWidget(
-                        title = stringResource(R.string.config_control_center),
+                        title = stringResource(R.string.config_notification_control_center),
                         shape = shape,
                         trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null) },
                         onClick = onOpenControlCenter,
